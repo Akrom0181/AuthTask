@@ -1,0 +1,41 @@
+# Ignore the .env file to protect sensitive information
+.env
+
+# Logs
+*.log
+logs/
+debug.log
+
+# Dependency directories
+node_modules/
+vendor/
+
+# Build and binary output directories
+/bin
+/obj
+/build
+/dist
+
+# IDE/editor specific files
+.vscode/
+.idea/
+*.swp
+
+# Operating system specific files
+.DS_Store
+Thumbs.db
+
+# Go-specific files
+*.out
+*.test
+*.exe
+
+# Coverage files
+*.coverprofile
+*.cov
+coverage.out
+
+# Miscellaneous
+*.bak
+*.tmp
+*.old
