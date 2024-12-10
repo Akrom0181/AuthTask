@@ -21,15 +21,14 @@ type CreateContact struct {
 }
 
 type UpdateContact struct {
-	// UserID      string `json:"user_id"`
-	FirstName   string `json:"first_name"`
-	LastName    string `json:"last_name"`
-	MiddleName  string `json:"middle_name"`
-	PhoneNumber string `json:"phone_number"`
+	FirstName   *string `json:"first_name,omitempty"`
+	LastName    *string `json:"last_name,omitempty"`
+	MiddleName  *string `json:"middle_name,omitempty"`
+	PhoneNumber *string `json:"phone_number,omitempty"`
 }
 
 type GetContact struct {
-	ID          string `json:"id"`
+	ID string `json:"id"`
 	// UserID      string `json:"user_id"`
 	FirstName   string `json:"first_name"`
 	LastName    string `json:"last_name"`

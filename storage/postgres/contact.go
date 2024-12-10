@@ -194,26 +194,33 @@ func (c *ContactRepo) GetById(ctx context.Context, id string, userid string) (*m
 	return &contacts, nil
 }
 
-func (c *ContactRepo) Update(ctx context.Context, contact *models.Contact, user_id string) (*models.Contact, error) {
-	var createdAt, updatedAt time.Time
+func (c *ContactRepo) Update(ctx context.Context, contact *models.Contact, userID string) (*models.Contact, error) {
+	location, err := time.LoadLocation("Asia/Tashkent")
+	if err != nil {
+		c.log.Error("Error loading timezone", logger.Error(err))
+		return nil, fmt.Errorf("failed to load timezone: %w", err)
+	}
 
-	query := `UPDATE "contacts" SET 
-		first_name = $1,
-		last_name = $2,
-		middle_name = $3,
-		phone_number = $4,
-		updated_at = CURRENT_TIMESTAMP
+	query := `
+		UPDATE "contacts" SET 
+			first_name = COALESCE($1, first_name),
+			last_name = COALESCE($2, last_name),
+			middle_name = COALESCE($3, middle_name),
+			phone_number = COALESCE($4, phone_number),
+			updated_at = CURRENT_TIMESTAMP
 		WHERE id = $5 AND user_id = $6
-		RETURNING created_at, updated_at`
+		RETURNING created_at, updated_at
+	`
 
-	// Execute query
-	err := c.db.QueryRow(ctx, query,
-		contact.FirstName,   
-		contact.LastName,    
-		contact.MiddleName,  
-		contact.PhoneNumber, 
-		contact.ID,          
-		user_id,             
+	// Execute query and fetch timestamps
+	var createdAt, updatedAt time.Time
+	err = c.db.QueryRow(ctx, query,
+		contact.FirstName,   // $1
+		contact.LastName,    // $2
+		contact.MiddleName,  // $3
+		contact.PhoneNumber, // $4
+		contact.ID,          // $5
+		userID,              // $6
 	).Scan(&createdAt, &updatedAt)
 
 	if err != nil {
@@ -221,11 +228,7 @@ func (c *ContactRepo) Update(ctx context.Context, contact *models.Contact, user_
 		return nil, fmt.Errorf("error updating contact: %w", err)
 	}
 
-	location, err := time.LoadLocation("Asia/Tashkent")
-	if err != nil {
-		c.log.Error("Error loading timezone", logger.Error(err))
-		return nil, fmt.Errorf("timezone error: %w", err)
-	}
+	// Set updated timestamps with timezone formatting
 	contact.CreatedAt = createdAt.In(location).Format("2006-01-02 15:04:05 MST")
 	contact.UpdatedAt = updatedAt.In(location).Format("2006-01-02 15:04:05 MST")
 

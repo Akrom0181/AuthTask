@@ -67,10 +67,11 @@ func (h *Handler) CreateContact(c *gin.Context) {
 // @Produce      json
 // @Param        id path string true "Contact ID"
 // @Param        Contact body models.UpdateContact true "UpdateContactRequest"
-// @Success      200 {object} models.Contact
+// @Success      200 {object} Response{data=models.Contact}
 // @Response     400 {object} Response{data=string} "Bad Request"
-// @Failure      404 {object} Response{data=string} "Contact not found"
-// @Failure      500 {object} Response{data=string} "Server error"
+// @Response     401 {object} Response{data=string} "Unauthorized"
+// @Response     404 {object} Response{data=string} "Contact not found"
+// @Response     500 {object} Response{data=string} "Server error"
 func (h *Handler) UpdateContact(c *gin.Context) {
 	var updateRequest models.UpdateContact
 
@@ -98,7 +99,7 @@ func (h *Handler) UpdateContact(c *gin.Context) {
 
 	userIDStr, ok := userID.(string)
 	if !ok || userIDStr == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user ID"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID"})
 		return
 	}
 
@@ -106,7 +107,7 @@ func (h *Handler) UpdateContact(c *gin.Context) {
 	existingContact, err := h.storage.Contact().GetById(c.Request.Context(), id, userIDStr)
 	if err != nil {
 		if err.Error() == "contact not found" {
-			h.log.Error("Contact not found", logger.String("id", id))
+			h.log.Error("Contact not found", logger.String("id", id), logger.String("user_id", userIDStr))
 			c.JSON(http.StatusNotFound, gin.H{"error": "Contact not found"})
 		} else {
 			h.log.Error("Error fetching contact", logger.Error(err))
@@ -115,21 +116,29 @@ func (h *Handler) UpdateContact(c *gin.Context) {
 		return
 	}
 
-	// Update fields
-	existingContact.FirstName = updateRequest.FirstName
-	existingContact.LastName = updateRequest.LastName
-	existingContact.MiddleName = updateRequest.MiddleName
-	existingContact.PhoneNumber = updateRequest.PhoneNumber
+	// Update fields selectively
+	if updateRequest.FirstName != nil {
+		existingContact.FirstName = *updateRequest.FirstName
+	}
+	if updateRequest.LastName != nil {
+		existingContact.LastName = *updateRequest.LastName
+	}
+	if updateRequest.MiddleName != nil {
+		existingContact.MiddleName = *updateRequest.MiddleName
+	}
+	if updateRequest.PhoneNumber != nil {
+		existingContact.PhoneNumber = *updateRequest.PhoneNumber
+	}
 
 	// Update the contact in the database
-	updatedContact, err := h.storage.Contact().Update(c.Request.Context(), existingContact, userID.(string))
+	updatedContact, err := h.storage.Contact().Update(c.Request.Context(), existingContact, userIDStr)
 	if err != nil {
 		h.log.Error("Error updating contact", logger.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error updating contact"})
 		return
 	}
 
-	h.log.Info("Contact updated successfully", logger.Any("contact", updatedContact))
+	h.log.Info("Contact updated successfully", logger.String("id", id), logger.String("user_id", userIDStr))
 	c.JSON(http.StatusOK, gin.H{"data": updatedContact})
 }
 
