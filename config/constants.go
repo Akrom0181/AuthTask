@@ -20,7 +20,7 @@ const (
 	SmtpPassword        = "duriexakadbzalxw"
 )
 
-var SignedKey = []byte(os.Getenv("SECRET_KEY"))
+var SignedKey = []byte(os.Getenv("SECRET_KEY_JWT"))
 
 const (
 	DebugMode   = "debug"
