@@ -7,6 +7,7 @@ import (
 	_ "task/api/docs"
 	"task/api/models"
 	"task/pkg/logger"
+	check "task/pkg/validation"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -31,6 +32,12 @@ func (h *Handler) CreateContact(c *gin.Context) {
 	if err := c.ShouldBindJSON(&contact); err != nil {
 		h.log.Error(err.Error() + " : " + "error Contact Should Bind Json!")
 		c.JSON(http.StatusBadRequest, "Please, enter valid data!")
+		return
+	}
+
+	// Validate the phone number
+	if err := check.ValidatePhoneNumber(contact.PhoneNumber); err != nil {
+		handleResponseLog(c, h.log, "error validating phone number", http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -79,6 +86,12 @@ func (h *Handler) UpdateContact(c *gin.Context) {
 	if err := c.ShouldBindJSON(&updateRequest); err != nil {
 		h.log.Error("Invalid JSON payload", logger.Error(err))
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
+		return
+	}
+
+	// Validate the phone number
+	if err := check.ValidatePhoneNumber(*updateRequest.PhoneNumber); err != nil {
+		handleResponseLog(c, h.log, "error validating phone number", http.StatusBadRequest, err.Error())
 		return
 	}
 
