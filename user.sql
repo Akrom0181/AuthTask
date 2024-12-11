@@ -22,23 +22,10 @@ CREATE TABLE IF NOT EXISTS "users" (
 CREATE TABLE IF NOT EXISTS "devices" (
     id UUID PRIMARY KEY,
     user_id UUID NOT NULL, 
-    name VARCHAR(255) NOT NULL, 
-    notification_key VARCHAR(255) UNIQUE NOT NULL,
-    type device_type NOT NULL,
-    os_version VARCHAR(255) NOT NULL,
-    app_version VARCHAR(255) NOT NULL,
-    remember_me BOOLEAN DEFAULT false,
-    ad_id VARCHAR(255),  
+    device_info VARCHAR(255) NOT NULL, 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES "users"(id) ON DELETE CASCADE 
 );
 
-CREATE TYPE device_type AS ENUM ('android', 'iOS');
-
-CREATE INDEX idx_user_id ON devices(user_id);
-CREATE INDEX idx_type ON devices(type); 
-
 CREATE INDEX idx_users_phone_number ON "users"(phone_number);
 CREATE INDEX idx_contacts_user_id ON "contacts"(user_id);
-
-

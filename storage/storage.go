@@ -37,6 +37,7 @@ type IContactStorage interface {
 type IDeviceStorage interface {
 	Insert(ctx context.Context, device *models.Device) (*models.Device, error)
 	GetAll(ctx context.Context, id string) (*[]models.Device, error)
+	GetByID(ctx context.Context, id, user_id string) (*models.Device, error)
 	GetDeviceCount(ctx context.Context, userId string) (int, error)
 	Delete(ctx context.Context, id string, userid string) error
 	Remove(ctx context.Context, id string) error

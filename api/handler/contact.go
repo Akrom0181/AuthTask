@@ -15,7 +15,7 @@ import (
 
 // @Security BearerAuth
 // @ID 			 create_contact
-// @Router       /task/api/v1/createcontact [POST]
+// @Router       /task/api/v1/contact/create [POST]
 // @Summary      Create Contact
 // @Description  Create a new contact
 // @Tags         contact
@@ -28,30 +28,25 @@ import (
 func (h *Handler) CreateContact(c *gin.Context) {
 	var contact models.Contact
 
-	// Bind JSON request body to the contact model
 	if err := c.ShouldBindJSON(&contact); err != nil {
 		h.log.Error(err.Error() + " : " + "error Contact Should Bind Json!")
 		c.JSON(http.StatusBadRequest, "Please, enter valid data!")
 		return
 	}
 
-	// Validate the phone number
 	if err := check.ValidatePhoneNumber(contact.PhoneNumber); err != nil {
 		handleResponseLog(c, h.log, "error validating phone number", http.StatusBadRequest, err.Error())
 		return
 	}
 
-	// Extract user ID from context (JWT)
 	userID, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
 
-	// Assign userID from context to the contact's UserID field
 	contact.UserID = userID.(string)
 
-	// Create the contact in the database
 	resp, err := h.storage.Contact().Create(c.Request.Context(), &contact)
 	if err != nil {
 		h.log.Error(err.Error() + ":" + "Error Contact Create")
@@ -59,14 +54,13 @@ func (h *Handler) CreateContact(c *gin.Context) {
 		return
 	}
 
-	// Log success and return created contact in the response
 	h.log.Info("Contact created successfully!")
 	c.JSON(http.StatusCreated, Response{Data: resp})
 }
 
 // @Security BearerAuth
 // @ID           update_contact
-// @Router       /task/api/v1/updatecontact/{id} [PUT]
+// @Router       /task/api/v1/contact/update/{id} [PUT]
 // @Summary      Update Contact
 // @Description  Update an existing contact
 // @Tags         contact
@@ -82,20 +76,17 @@ func (h *Handler) CreateContact(c *gin.Context) {
 func (h *Handler) UpdateContact(c *gin.Context) {
 	var updateRequest models.UpdateContact
 
-	// Validate and bind input
 	if err := c.ShouldBindJSON(&updateRequest); err != nil {
 		h.log.Error("Invalid JSON payload", logger.Error(err))
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
 		return
 	}
 
-	// Validate the phone number
 	if err := check.ValidatePhoneNumber(*updateRequest.PhoneNumber); err != nil {
 		handleResponseLog(c, h.log, "error validating phone number", http.StatusBadRequest, err.Error())
 		return
 	}
 
-	// Extract contact ID from path
 	id := c.Param("id")
 	if id == "" {
 		h.log.Error("Missing contact ID in path")
@@ -103,7 +94,6 @@ func (h *Handler) UpdateContact(c *gin.Context) {
 		return
 	}
 
-	// Extract user ID from context (JWT middleware ensures this is set)
 	userID, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
@@ -116,7 +106,6 @@ func (h *Handler) UpdateContact(c *gin.Context) {
 		return
 	}
 
-	// Fetch the existing contact
 	existingContact, err := h.storage.Contact().GetById(c.Request.Context(), id, userIDStr)
 	if err != nil {
 		if err.Error() == "contact not found" {
@@ -129,7 +118,6 @@ func (h *Handler) UpdateContact(c *gin.Context) {
 		return
 	}
 
-	// Update fields selectively
 	if updateRequest.FirstName != nil {
 		existingContact.FirstName = *updateRequest.FirstName
 	}
@@ -143,7 +131,6 @@ func (h *Handler) UpdateContact(c *gin.Context) {
 		existingContact.PhoneNumber = *updateRequest.PhoneNumber
 	}
 
-	// Update the contact in the database
 	updatedContact, err := h.storage.Contact().Update(c.Request.Context(), existingContact, userIDStr)
 	if err != nil {
 		h.log.Error("Error updating contact", logger.Error(err))
@@ -157,7 +144,7 @@ func (h *Handler) UpdateContact(c *gin.Context) {
 
 // @Security BearerAuth
 // @ID              get_Contact
-// @Router          /task/api/v1/getbyidcontact/{id} [GET]
+// @Router          /task/api/v1/contact/getbyid/{id} [GET]
 // @Summary         Get contact by ID
 // @Description     Retrieve a contact by their ID
 // @Tags            contact
@@ -192,11 +179,11 @@ func (h *Handler) GetContactsById(c *gin.Context) {
 	// Query the database to fetch the contact
 	contact, err := h.storage.Contact().GetById(c.Request.Context(), contactID, userIDStr)
 	if err != nil {
-		h.log.Error("Error fetching contact", logger.Error(err))
-		if err.Error() == "contact not found" {
-			c.JSON(http.StatusNotFound, gin.H{"error": "contact not found"})
+		h.log.Error("Error: ", logger.Error(err))
+		if err.Error() == "database error: no rows in result set" {
+			c.JSON(http.StatusNotFound, Response{Status: http.StatusNotFound, Description: "contact not found"})
 		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch contact"})
+			c.JSON(http.StatusInternalServerError, Response{Status: http.StatusInternalServerError, Description: err.Error()})
 		}
 		return
 	}
@@ -207,13 +194,13 @@ func (h *Handler) GetContactsById(c *gin.Context) {
 
 // @Security BearerAuth
 // @ID 			    get_all_Contacts
-// @Router 			/task/api/v1/getallcontacts [GET]
+// @Router 			/task/api/v1/contact/getall [GET]
 // @Summary 		Get all Contacts
 // @Description		Retrieve all Contacts
 // @Tags 			contact
 // @Accept 			json
 // @Produce 		json
-// @Param 			search query string false "Search Contacts by name or email"
+// @Param 			search query string false "Search contacts by firstname or phonenumber"
 // @Param 			page   query uint64 false "Page number"
 // @Param 			limit  query uint64 false "Limit number of results per page"
 // @Success 		200 {object} Response{data=string} "Successfully retrieved contacts"
@@ -274,7 +261,7 @@ func (h *Handler) GetAllContacts(c *gin.Context) {
 
 // @Security BearerAuth
 // @ID 			delete_Contact
-// @Router		/task/api/v1/deletecontact/{id} [DELETE]
+// @Router		/task/api/v1/contact/delete/{id} [DELETE]
 // @Summary		Delete contact by ID
 // @Description Delete a contact by its ID
 // @Tags		contact
@@ -312,7 +299,18 @@ func (h *Handler) DeleteContact(c *gin.Context) {
 		return
 	}
 
-	err = h.storage.Contact().Delete(context.Background(), id, userIDStr)
+	contact, err := h.storage.Contact().GetById(c.Request.Context(), id, userIDStr)
+	if err != nil {
+		h.log.Error("Error: ", logger.Error(err))
+		if err.Error() == "database error: no rows in result set" {
+			c.JSON(http.StatusNotFound, Response{Status: http.StatusNotFound, Description: "contact not found"})
+		} else {
+			c.JSON(http.StatusInternalServerError, Response{Status: http.StatusInternalServerError, Description: err.Error()})
+		}
+		return
+	}
+
+	err = h.storage.Contact().Delete(context.Background(), contact.ID, userIDStr)
 	if err != nil {
 		h.log.Error(err.Error() + ":" + "error while deleting Contact")
 		c.JSON(http.StatusBadRequest, "please input valid data")
@@ -320,5 +318,5 @@ func (h *Handler) DeleteContact(c *gin.Context) {
 	}
 
 	h.log.Info("Contact deleted successfully!")
-	c.JSON(http.StatusOK, Response{Data: id})
+	c.JSON(http.StatusOK, Response{Status: http.StatusOK, Description: "contact deleted successfully!", Data: id})
 }

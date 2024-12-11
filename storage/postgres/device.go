@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"task/api/models"
 	"task/pkg/logger"
@@ -27,14 +28,33 @@ func (s *DeviceRepo) Insert(ctx context.Context, device *models.Device) (*models
 	id := uuid.New()
 	var created_at time.Time
 	query := `
-		INSERT INTO "devices" (id, user_id, device_info, created_at)
-		VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
-		RETURNING id, user_id, device_info, created_at;
+		INSERT INTO "devices" (id, user_id, name, notification_key, type, os_version, app_version, remember_me, ad_id, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, CURRENT_TIMESTAMP)
+		RETURNING id, user_id, name, notification_key, type, os_version, app_version, remember_me, ad_id, created_at;
 	`
-	row := s.db.QueryRow(ctx, query, id.String(), device.UserID, device.DeviceInfo)
+	row := s.db.QueryRow(ctx, query,
+		id.String(),
+		device.UserID,
+		device.Name,
+		device.NotificationKey,
+		device.Type,
+		device.OsVersion,
+		device.AppVersion,
+		device.RememberMe,
+		device.AdId)
 
-	var createdDevice models.Device
-	err := row.Scan(&createdDevice.ID, &createdDevice.UserID, &createdDevice.DeviceInfo, &created_at)
+	err := row.Scan(
+		&device.ID,
+		&device.UserID,
+		&device.Name,
+		&device.NotificationKey,
+		&device.Type,
+		&device.OsVersion,
+		&device.AppVersion,
+		&device.RememberMe,
+		&device.AdId,
+		&created_at,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert device: %w", err)
 	}
@@ -43,16 +63,16 @@ func (s *DeviceRepo) Insert(ctx context.Context, device *models.Device) (*models
 		s.log.Error("Error loading timezone", logger.Error(err))
 		return nil, fmt.Errorf("timezone error: %w", err)
 	}
-	createdDevice.CreatedAt = created_at.In(location).Format("2006-01-02 15:04:05 MST")
+	device.CreatedAt = created_at.In(location).Format("2006-01-02 15:04:05 MST")
 
-	return &createdDevice, nil
+	return device, nil
 }
 
 // GetAll retrieves all devices for a given user ID
 func (s *DeviceRepo) GetAll(ctx context.Context, userId string) (*[]models.Device, error) {
 
 	query := `
-		SELECT id, user_id, device_info, created_at
+		SELECT id, user_id, name, notification_key, type, os_version, app_version, remember_me, ad_id, created_at
 		FROM "devices"
 		WHERE user_id = $1
 		ORDER BY created_at ASC;
@@ -68,19 +88,24 @@ func (s *DeviceRepo) GetAll(ctx context.Context, userId string) (*[]models.Devic
 	for rows.Next() {
 		var device models.Device
 		var created_at time.Time
-		err := rows.Scan(&device.ID, &device.UserID, &device.DeviceInfo, &created_at)
+		err := rows.Scan(
+			&device.ID,
+			&device.UserID,
+			&device.Name,
+			&device.NotificationKey,
+			&device.Type,
+			&device.OsVersion,
+			&device.AppVersion,
+			&device.RememberMe,
+			&device.AdId,
+			&created_at,
+		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan device: %w", err)
 		}
 
-		location, err := time.LoadLocation("Asia/Tashkent")
+		device.CreatedAt = created_at.Format("2006-01-02 15:04:05")
 
-		if err != nil {
-			s.log.Error("Error loading timezone", logger.Error(err))
-			return nil, fmt.Errorf("timezone error: %w", err)
-		}
-
-		device.CreatedAt = created_at.In(location).Format("2006-01-02 15:04:05 MST")
 		devices = append(devices, device)
 	}
 
@@ -131,4 +156,21 @@ func (s *DeviceRepo) Remove(ctx context.Context, deviceId string) error {
 	}
 
 	return nil
+}
+
+func (s *DeviceRepo) GetByID(ctx context.Context, id, user_id string) (*models.Device, error) {
+	query := `Select id, user_id FROM "devices" WHERE id = $1 AND user_id = $2`
+
+	err := s.db.QueryRow(ctx, query, id, user_id).Scan(ctx, &id, &user_id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("device not found")
+		}
+		s.log.Error("Error executing query", logger.Error(err))
+		return nil, fmt.Errorf("database error: %w", err)
+	}
+	return &models.Device{
+		ID:     id,
+		UserID: user_id,
+	}, nil
 }

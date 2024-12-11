@@ -95,12 +95,12 @@ func (r *UserRepo) GetById(ctx context.Context, id string) (*models.User, error)
 	}
 
 	// Format created_at to the desired format and timezone
-	formattedCreatedAt := created_at.In(location).Format("2006-01-02 15:04:05 MST")
+	formattedCreatedAt := created_at.In(location).Format("2006-01-02 15:04:05")
 
 	// Format updated_at if it is not null
 	var formattedUpdatedAt string
 	if updated_at.Valid {
-		formattedUpdatedAt = updated_at.Time.In(location).Format("2006-01-02 15:04:05 MST")
+		formattedUpdatedAt = updated_at.Time.In(location).Format("2006-01-02 15:04:05")
 	} else {
 		formattedUpdatedAt = ""
 	}
@@ -162,12 +162,12 @@ func (u *UserRepo) GetAll(ctx context.Context, req *models.GetAllUsersRequest) (
 		}
 		var formattedUpdatedAt string
 		if updated_at.Valid {
-			formattedUpdatedAt = updated_at.Time.In(location).Format("2006-01-02 15:04:05 MST")
+			formattedUpdatedAt = updated_at.Time.In(location).Format("2006-01-02 15:04:05")
 		} else {
 			formattedUpdatedAt = ""
 		}
 		// Convert time.Time to the desired format and timezone
-		user.CreatedAt = created_at.In(location).Format("2006-01-02 15:04:05 MST")
+		user.CreatedAt = created_at.In(location).Format("2006-01-02 15:04:05")
 		user.UpdatedAt = formattedUpdatedAt
 		response.Users = append(response.Users, user)
 	}
@@ -221,12 +221,43 @@ func (u *UserRepo) Update(ctx context.Context, user *models.User, user_id string
 }
 
 func (r *UserRepo) Delete(ctx context.Context, id string) error {
-	query := `DELETE FROM "users" WHERE id = $1`
-	_, err := r.db.Exec(ctx, query, id)
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		r.log.Error("Error starting transaction", logger.Error(err))
+		return fmt.Errorf("failed to start transaction: %w", err)
+	}
+
+	deleteDevicesQuery := `DELETE FROM "devices" WHERE user_id = $1`
+	_, err = tx.Exec(ctx, deleteDevicesQuery, id)
+	if err != nil {
+		r.log.Error("Error deleting devices", logger.Error(err))
+		tx.Rollback(ctx)
+		return fmt.Errorf("failed to delete devices: %w", err)
+	}
+
+	deleteUserQuery := `DELETE FROM "users" WHERE id = $1`
+	_, err = tx.Exec(ctx, deleteUserQuery, id)
 	if err != nil {
 		r.log.Error("Error deleting user", logger.Error(err))
-		return err
+		tx.Rollback(ctx)
+		return fmt.Errorf("failed to delete user: %w", err)
 	}
+
+	deleteContactQuery := `DELETE FROM "contacts" WHERE user_id = $1`
+	_, err = tx.Exec(ctx, deleteContactQuery, id)
+	if err != nil {
+		r.log.Error("Error deleting contact", logger.Error(err))
+		tx.Rollback(ctx)
+		return fmt.Errorf("failed to delete contact: %w", err)
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		r.log.Error("Error committing transaction", logger.Error(err))
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	r.log.Info("User and associated devices deleted successfully", logger.String("userID", id))
 	return nil
 }
 

@@ -31,43 +31,6 @@ func NewAuthService(storage storage.IStorage, log logger.LoggerI, redis storage.
 	}
 }
 
-// func (a authService) UserLogin(ctx context.Context, loginRequest models.UserLoginRequest) (models.UserLoginResponse, error) {
-// 	resp := models.UserLoginResponse{}
-// 	fmt.Println(" loginRequest.Login: ", loginRequest.MobilePhone)
-// 	user, err := a.storage.User().GetByLogin(ctx, loginRequest.MobilePhone)
-// 	if err != nil {
-// 		a.log.Error("error while getting user credentials by login", logger.Error(err))
-// 		return models.UserLoginResponse{}, err
-// 	}
-
-// 	otpData, err := a.redis.Get(ctx, loginRequest.MobilePhone)
-// 	if err != nil {
-// 		a.log.Error("error while getting otp code for user login confirm", logger.Error(err))
-// 		return resp, err
-// 	}
-
-// 	if otpData != loginRequest.Otp {
-// 		a.log.Error("otp code mismatch", logger.Error(err))
-// 		return resp, err
-// 	}
-
-// 	m := make(map[interface{}]interface{})
-
-// 	m["user_id"] = user.ID
-// 	m["user_role"] = config.USER_ROLE
-
-// 	accessToken, refreshToken, err := jwt.GenJWT(m)
-// 	if err != nil {
-// 		a.log.Error("error while generating tokens for user login", logger.Error(err))
-// 		return models.UserLoginResponse{}, err
-// 	}
-
-// 	return models.UserLoginResponse{
-// 		AccessToken:  accessToken,
-// 		RefreshToken: refreshToken,
-// 	}, nil
-// }
-
 func (a authService) OTPForChangingNumber(ctx context.Context, loginRequest models.UserLoginRequest) (string, error) {
 	fmt.Println(" loginRequest.Login: ", loginRequest.MobilePhone)
 
@@ -141,13 +104,15 @@ func (a authService) UserRegister(ctx context.Context, loginRequest models.UserR
 
 	// Create a temporary user object to store in Redis
 	tempUser := struct {
-		OTP       string `json:"otp"` // Change OTP to string
-		FirstName string `json:"first_name"`
-		LastName  string `json:"last_name"`
+		OTP         string `json:"otp"`
+		FirstName   string `json:"first_name"`
+		LastName    string `json:"last_name"`
+		PhoneNumber string `json:"phone_number"`
 	}{
-		OTP:       otpStr, // Use the string OTP
-		FirstName: loginRequest.User.FirstName,
-		LastName:  loginRequest.User.LastName,
+		OTP:         otpStr, // Use the string OTP
+		FirstName:   loginRequest.User.FirstName,
+		LastName:    loginRequest.User.LastName,
+		PhoneNumber: loginRequest.MobilePhone,
 	}
 
 	// Serialize to JSON
@@ -182,65 +147,83 @@ func (a authService) UserRegisterConfirm(ctx context.Context, req models.UserReg
 	// Retrieve OTP data from Redis
 	otpData, err := a.redis.Get(ctx, req.MobilePhone)
 	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			a.log.Error("otp not found in Redis", logger.String("mobile_phone", req.MobilePhone))
+			return resp, fmt.Errorf("otp not found for phone number %s", req.MobilePhone)
+		}
 		a.log.Error("error while getting otp code for user register confirm", logger.Error(err))
-		return resp, err
+		return resp, fmt.Errorf("error retrieving OTP data: %v", err)
 	}
 
-	// Ensure otpData is a string or byte slice
 	otpDataStr, ok := otpData.(string)
 	if !ok {
 		a.log.Error("invalid OTP data format", logger.String("type", fmt.Sprintf("%T", otpData)))
-		return resp, errors.New("invalid OTP data format")
+		return resp, fmt.Errorf("invalid OTP data format")
 	}
 
-	// Unmarshal OTP data
 	var tempUser struct {
-		OTP       string `json:"otp"`
-		FirstName string `json:"first_name"`
-		LastName  string `json:"last_name"`
+		OTP         string `json:"otp"`
+		FirstName   string `json:"first_name"`
+		LastName    string `json:"last_name"`
+		PhoneNumber string `json:"phone_number"`
 	}
 	err = json.Unmarshal([]byte(otpDataStr), &tempUser)
 	if err != nil {
 		a.log.Error("error while unmarshalling otp data", logger.Error(err))
-		return resp, errors.New("failed to parse OTP data")
+		return resp, fmt.Errorf("failed to parse OTP data")
 	}
 
-	// Debugging log to verify OTP comparison
-	a.log.Info("Received OTP", logger.String("received_otp", req.Otp))
-	a.log.Info("Stored OTP", logger.String("stored_otp", tempUser.OTP))
-
-	// Compare OTP with the one provided by the user
 	if req.Otp != tempUser.OTP {
 		a.log.Error("incorrect otp code for user register confirm", logger.String("mobile_phone", req.MobilePhone))
-		return resp, errors.New("incorrect otp code")
+		return resp, fmt.Errorf("incorrect otp code")
 	}
 
-	// Now set the user's information from Redis (FirstName, LastName, PhoneNumber)
+	// Now create the user in the database
 	user := models.User{
 		FirstName:   tempUser.FirstName,
 		LastName:    tempUser.LastName,
-		PhoneNumber: req.MobilePhone, // PhoneNumber is provided in the request
+		PhoneNumber: tempUser.PhoneNumber,
 	}
 
-	// Save the user information to the database
+	// Insert the user into the database and get the user ID
 	id, err := a.storage.User().Create(ctx, &user)
 	if err != nil {
 		a.log.Error("error while creating user", logger.Error(err))
-		return resp, err
+		return resp, fmt.Errorf("failed to create user: %v", err)
+	}
+
+	// Now that the user is created, create the device
+	device := models.Device{
+		UserID:          id.ID, // Use the user ID here
+		Name:            req.DeviceInfo.Name,
+		NotificationKey: req.DeviceInfo.NotificationKey,
+		Type:            req.DeviceInfo.Type,
+		OsVersion:       req.DeviceInfo.OsVersion,
+		AppVersion:      req.DeviceInfo.AppVersion,
+		RememberMe:      req.DeviceInfo.RememberMe,
+		AdId:            req.DeviceInfo.AdId,
+	}
+
+	// Insert the device into the database
+	deviceID, err := a.storage.Device().Insert(ctx, &device)
+	if err != nil {
+		a.log.Error("error while inserting device", logger.Error(err))
+		return resp, fmt.Errorf("failed to insert device: %v", err)
 	}
 
 	// Create JWT tokens for the user
-	claims := map[string]interface{}{
-		"user_id":   id,
-		"user_role": config.USER_ROLE,
-	}
+	m := make(map[string]interface{})
+	m["user_id"] = id.ID
+	m["user_role"] = config.USER_ROLE
+	m["device_id"] = deviceID.ID
 
-	accessToken, refreshToken, err := jwt.GenJWT(claims)
+	accessToken, refreshToken, err := jwt.GenJWT(m)
 	if err != nil {
 		a.log.Error("error while generating tokens for user register confirm", logger.Error(err))
-		return resp, err
+		return resp, fmt.Errorf("failed to generate tokens: %v", err)
 	}
 
+	// Set the generated tokens in the response
 	resp.AccessToken = accessToken
 	resp.RefreshToken = refreshToken
 
@@ -283,8 +266,14 @@ func (a authService) UserLoginByPhoneConfirm(ctx context.Context, req models.Use
 
 	// Create a device entry for the user (new device if not already registered)
 	device := models.Device{
-		UserID:     id.ID,
-		DeviceInfo: req.DeviceInfo, // Get the device info from the request
+		UserID:          id.ID,
+		Name:            req.DeviceInfo.Name,
+		NotificationKey: req.DeviceInfo.NotificationKey,
+		Type:            req.DeviceInfo.Type,
+		OsVersion:       req.DeviceInfo.OsVersion,
+		AppVersion:      req.DeviceInfo.AppVersion,
+		RememberMe:      req.DeviceInfo.RememberMe,
+		AdId:            req.DeviceInfo.AdId,
 	}
 
 	// Insert the device into the database and get the device ID
@@ -296,7 +285,7 @@ func (a authService) UserLoginByPhoneConfirm(ctx context.Context, req models.Use
 
 	// Prepare the JWT payload
 	m := make(map[string]interface{})
-	m["user_id"] = id
+	m["user_id"] = id.ID
 	m["user_role"] = config.USER_ROLE
 	m["device_id"] = deviceID.ID // Add device_id to the payload
 
@@ -313,3 +302,42 @@ func (a authService) UserLoginByPhoneConfirm(ctx context.Context, req models.Use
 
 	return resp, nil
 }
+
+/*
+func (a authService) UserLogin(ctx context.Context, loginRequest models.UserLoginRequest) (models.UserLoginResponse, error) {
+	resp := models.UserLoginResponse{}
+	fmt.Println(" loginRequest.Login: ", loginRequest.MobilePhone)
+	user, err := a.storage.User().GetByLogin(ctx, loginRequest.MobilePhone)
+	if err != nil {
+		a.log.Error("error while getting user credentials by login", logger.Error(err))
+		return models.UserLoginResponse{}, err
+	}
+
+	otpData, err := a.redis.Get(ctx, loginRequest.MobilePhone)
+	if err != nil {
+		a.log.Error("error while getting otp code for user login confirm", logger.Error(err))
+		return resp, err
+	}
+
+	if otpData != loginRequest.Otp {
+		a.log.Error("otp code mismatch", logger.Error(err))
+		return resp, err
+	}
+
+	m := make(map[interface{}]interface{})
+
+	m["user_id"] = user.ID
+	m["user_role"] = config.USER_ROLE
+
+	accessToken, refreshToken, err := jwt.GenJWT(m)
+	if err != nil {
+		a.log.Error("error while generating tokens for user login", logger.Error(err))
+		return models.UserLoginResponse{}, err
+	}
+
+	return models.UserLoginResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	}, nil
+}
+*/

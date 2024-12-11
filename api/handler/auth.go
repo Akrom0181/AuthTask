@@ -11,7 +11,7 @@ import (
 )
 
 // UserRegister godoc
-// @Router       /task/api/v1/user/sendcode [POST]
+// @Router       /task/api/v1/user/registerrequest [POST]
 // @Summary      Sending otp to register
 // @Description  Registering to System
 // @Tags         auth
@@ -60,26 +60,42 @@ func (h *Handler) SendCode(c *gin.Context) {
 func (h *Handler) Register(c *gin.Context) {
 	req := models.UserRegisterConfRequest{}
 
+	// Bind incoming JSON to the request struct
 	if err := c.ShouldBindJSON(&req); err != nil {
-		handleResponseLog(c, h.log, "error while binding body", http.StatusBadRequest, err)
+		handleResponseLog(c, h.log, "error while binding body", http.StatusBadRequest, err.Error())
 		return
 	}
-	fmt.Println("req: ", req)
 
+	// Log the request
+	// h.log.Debug("Received registration request", "mobile_phone", req.MobilePhone)
+
+	// Validate phone number
 	if err := check.ValidatePhoneNumber(req.MobilePhone); err != nil {
+		// h.log.Error()
 		handleResponseLog(c, h.log, "error validating phone number", http.StatusBadRequest, err.Error())
 		return
 	}
 
+	// Call service layer to confirm registration
 	confResp, err := h.service.Auth().UserRegisterConfirm(c.Request.Context(), req)
 	if err != nil {
-		handleResponseLog(c, h.log, "error while confirming", http.StatusUnauthorized, err.Error())
+		h.log.Error(err.Error() + ":" + "error while confirming user registration")
+		c.JSON(http.StatusInternalServerError, Response{
+			Status:      http.StatusInternalServerError,
+			Description: "Failed to confirm user registration",
+			Data:        err.Error() + ":" + "error while confirming user registration",
+		})
 		return
 	}
 
-	handleResponseLog(c, h.log, "Success", http.StatusOK, confResp)
-
+	// Log and return success response
+	handleResponseLog(c, h.log, "User registration confirmed successfully", http.StatusOK, confResp)
 }
+
+/*
+	h.log.Error("missing device id")
+	c.JSON(http.StatusBadRequest, "fill the gap with id")
+*/
 
 // UserLogin godoc
 // @Router       /task/api/v1/user/loginrequest [POST]
@@ -171,21 +187,9 @@ func (h *Handler) UserLoginByPhoneConfirm(c *gin.Context) {
 
 	// If the user has more than 3 devices, prompt them to delete one
 	if deviceCount >= 3 {
-		// Get all devices for the user
-		devices, err := h.storage.Device().GetAll(c.Request.Context(), user.ID)
-		if err != nil {
-			h.log.Error("error fetching devices: " + err.Error())
-			c.JSON(http.StatusInternalServerError, models.Response{
-				StatusCode:  http.StatusInternalServerError,
-				Description: "Error fetching devices",
-			})
-			return
-		}
-
-		// Return the devices and ask the user to choose which one to delete
-		c.JSON(http.StatusConflict, gin.H{
-			"message": "Too many devices. Please remove one device to continue.",
-			"devices": devices,
+		c.JSON(http.StatusBadRequest, models.Response{
+			StatusCode:  http.StatusBadRequest,
+			Description: "You have exceeded the device limit. Please delete one of your devices to proceed.",
 		})
 		return
 	}
@@ -193,38 +197,21 @@ func (h *Handler) UserLoginByPhoneConfirm(c *gin.Context) {
 	// Proceed with login process after confirming OTP
 	resp, err := h.service.Auth().UserLoginByPhoneConfirm(c.Request.Context(), req)
 	if err != nil {
-		statusCode := http.StatusInternalServerError
-		message := "INTERNAL_SERVER_ERROR"
+		StatusCode := http.StatusInternalServerError
+		message := "INTERNAL_SERVER_ERROR" + err.Error()
 
-		if err.Error() == "OTP code not found or expired time" || err.Error() == "Incorrect OTP code" {
-			statusCode = http.StatusUnauthorized
+		if err.Error() == "OTP code not found or expired time" || err.Error() == "Incorrect OTP code" || err.Error() == "OTP data not found in Redis" {
+			StatusCode = http.StatusBadRequest
 			message = err.Error()
 		}
 
 		h.log.Error("error in UserLoginByPhoneConfirm: " + err.Error())
-		c.JSON(statusCode, models.Response{
-			StatusCode:  statusCode,
+		c.JSON(StatusCode, models.Response{
+			StatusCode:  StatusCode,
 			Description: message,
 		})
 		return
 	}
-	// dev := models.Device{}
-	// // Get the device info from the request (for the new device)
-	// device := models.Device{
-	// 	UserID:     user.ID,
-	// 	DeviceInfo: dev.DeviceInfo, // Assuming the client sends the device info
-	// }
-
-	// Insert the new device into the database
-	// _, err = h.storage.Device().Insert(c.Request.Context(), &device)
-	// if err != nil {
-	// 	h.log.Error("error inserting device: " + err.Error())
-	// 	c.JSON(http.StatusInternalServerError, models.Response{
-	// 		StatusCode:  http.StatusInternalServerError,
-	// 		Description: "Failed to log device",
-	// 	})
-	// 	return
-	// }
 
 	h.log.Info("Successfully logged in by phone")
 	c.JSON(http.StatusOK, resp)

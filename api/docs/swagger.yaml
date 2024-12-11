@@ -1,12 +1,12 @@
 definitions:
   handler.Response:
     properties:
+      Status:
+        type: integer
       data: {}
       description:
         type: string
       error: {}
-      status:
-        type: integer
     type: object
   models.Contact:
     properties:
@@ -43,7 +43,19 @@ definitions:
     type: object
   models.CreateDevice:
     properties:
-      device_info:
+      adId:
+        type: string
+      appVersion:
+        type: string
+      name:
+        type: string
+      notificationKey:
+        type: string
+      osVersion:
+        type: string
+      remember_me:
+        type: boolean
+      type:
         type: string
     type: object
   models.CreateUser:
@@ -51,8 +63,6 @@ definitions:
       first_name:
         type: string
       last_name:
-        type: string
-      phone_number:
         type: string
     type: object
   models.GetAllUsersResponse:
@@ -66,16 +76,15 @@ definitions:
     type: object
   models.Response:
     properties:
+      Status_code:
+        type: integer
       data: {}
       description:
         type: string
-      statusCode:
-        type: integer
     type: object
   models.UpdateContact:
     properties:
       first_name:
-        description: UserID      string `json:"user_id"`
         type: string
       last_name:
         type: string
@@ -122,10 +131,10 @@ definitions:
   models.UserLoginPhoneConfirmRequest:
     properties:
       device_info:
+        $ref: '#/definitions/models.CreateDevice'
+      otp:
         type: string
       phone_number:
-        type: string
-      smscode:
         type: string
     type: object
   models.UserLoginRequest:
@@ -142,6 +151,8 @@ definitions:
     type: object
   models.UserRegisterConfRequest:
     properties:
+      device_info:
+        $ref: '#/definitions/models.CreateDevice'
       otp:
         type: string
       phone_number:
@@ -160,7 +171,7 @@ info:
   title: Swagger Example API
   version: "1.0"
 paths:
-  /task/api/v1/createcontact:
+  /task/api/v1/contact/create:
     post:
       consumes:
       - application/json
@@ -208,48 +219,7 @@ paths:
       summary: Create Contact
       tags:
       - contact
-  /task/api/v1/createuser:
-    post:
-      consumes:
-      - application/json
-      description: Create a new user
-      operationId: create_user
-      parameters:
-      - description: User
-        in: body
-        name: User
-        required: true
-        schema:
-          $ref: '#/definitions/models.CreateUser'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/models.User'
-        "400":
-          description: Bad Request
-          schema:
-            allOf:
-            - $ref: '#/definitions/handler.Response'
-            - properties:
-                data:
-                  type: string
-              type: object
-        "500":
-          description: Server error
-          schema:
-            allOf:
-            - $ref: '#/definitions/handler.Response'
-            - properties:
-                data:
-                  type: string
-              type: object
-      summary: Create User
-      tags:
-      - user
-  /task/api/v1/deletecontact/{id}:
+  /task/api/v1/contact/delete/{id}:
     delete:
       consumes:
       - application/json
@@ -296,156 +266,14 @@ paths:
       summary: Delete contact by ID
       tags:
       - contact
-  /task/api/v1/deletedevice/{id}:
-    delete:
-      consumes:
-      - application/json
-      description: Delete device by its ID
-      operationId: delete_device
-      parameters:
-      - description: Device ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Success Request
-          schema:
-            allOf:
-            - $ref: '#/definitions/handler.Response'
-            - properties:
-                data:
-                  type: string
-              type: object
-        "400":
-          description: Bad Request
-          schema:
-            allOf:
-            - $ref: '#/definitions/handler.Response'
-            - properties:
-                data:
-                  type: string
-              type: object
-        "500":
-          description: Server error
-          schema:
-            allOf:
-            - $ref: '#/definitions/handler.Response'
-            - properties:
-                data:
-                  type: string
-              type: object
-      security:
-      - BearerAuth: []
-      summary: Delete device by ID
-      tags:
-      - device
-  /task/api/v1/deleteuser/{id}:
-    delete:
-      consumes:
-      - application/json
-      description: Delete a user by their ID
-      operationId: delete_user
-      parameters:
-      - description: User ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Success Request
-          schema:
-            allOf:
-            - $ref: '#/definitions/handler.Response'
-            - properties:
-                data:
-                  type: string
-              type: object
-        "400":
-          description: Bad Request
-          schema:
-            allOf:
-            - $ref: '#/definitions/handler.Response'
-            - properties:
-                data:
-                  type: string
-              type: object
-        "500":
-          description: Server error
-          schema:
-            allOf:
-            - $ref: '#/definitions/handler.Response'
-            - properties:
-                data:
-                  type: string
-              type: object
-      security:
-      - BearerAuth: []
-      summary: Delete User by ID
-      tags:
-      - user
-  /task/api/v1/devicecreate:
-    post:
-      consumes:
-      - application/json
-      description: Create a new device
-      operationId: create_device
-      parameters:
-      - description: Device
-        in: body
-        name: Device
-        required: true
-        schema:
-          $ref: '#/definitions/models.CreateDevice'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Successfully created device
-          schema:
-            allOf:
-            - $ref: '#/definitions/handler.Response'
-            - properties:
-                data:
-                  type: string
-              type: object
-        "400":
-          description: Bad Request
-          schema:
-            allOf:
-            - $ref: '#/definitions/handler.Response'
-            - properties:
-                data:
-                  type: string
-              type: object
-        "500":
-          description: Server error
-          schema:
-            allOf:
-            - $ref: '#/definitions/handler.Response'
-            - properties:
-                data:
-                  type: string
-              type: object
-      security:
-      - BearerAuth: []
-      summary: Create device
-      tags:
-      - device
-  /task/api/v1/getallcontacts:
+  /task/api/v1/contact/getall:
     get:
       consumes:
       - application/json
       description: Retrieve all Contacts
       operationId: get_all_Contacts
       parameters:
-      - description: Search Contacts by name or email
+      - description: Search contacts by firstname or phonenumber
         in: query
         name: search
         type: string
@@ -501,54 +329,7 @@ paths:
       summary: Get all Contacts
       tags:
       - contact
-  /task/api/v1/getallusers:
-    get:
-      consumes:
-      - application/json
-      description: Retrieve all users
-      operationId: get_all_users
-      parameters:
-      - description: Search users by name or email
-        in: query
-        name: search
-        type: string
-      - description: Page number
-        in: query
-        name: page
-        type: integer
-      - description: Limit number of results per page
-        in: query
-        name: limit
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/models.GetAllUsersResponse'
-        "400":
-          description: Bad Request
-          schema:
-            allOf:
-            - $ref: '#/definitions/handler.Response'
-            - properties:
-                data:
-                  type: string
-              type: object
-        "500":
-          description: Server error
-          schema:
-            allOf:
-            - $ref: '#/definitions/handler.Response'
-            - properties:
-                data:
-                  type: string
-              type: object
-      summary: Get All Users
-      tags:
-      - user
-  /task/api/v1/getbyidcontact/{id}:
+  /task/api/v1/contact/getbyid/{id}:
     get:
       consumes:
       - application/json
@@ -604,25 +385,36 @@ paths:
       summary: Get contact by ID
       tags:
       - contact
-  /task/api/v1/getbyiduser/{id}:
-    get:
+  /task/api/v1/contact/update/{id}:
+    put:
       consumes:
       - application/json
-      description: Retrieve a user by their ID
-      operationId: get_user
+      description: Update an existing contact
+      operationId: update_contact
       parameters:
-      - description: User ID
+      - description: Contact ID
         in: path
         name: id
         required: true
         type: string
+      - description: UpdateContactRequest
+        in: body
+        name: Contact
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateContact'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/models.User'
+            allOf:
+            - $ref: '#/definitions/handler.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Contact'
+              type: object
         "400":
           description: Bad Request
           schema:
@@ -632,8 +424,17 @@ paths:
                 data:
                   type: string
               type: object
+        "401":
+          description: Unauthorized
+          schema:
+            allOf:
+            - $ref: '#/definitions/handler.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
         "404":
-          description: User not found
+          description: Contact not found
           schema:
             allOf:
             - $ref: '#/definitions/handler.Response'
@@ -650,10 +451,59 @@ paths:
                 data:
                   type: string
               type: object
-      summary: Get User by ID
+      security:
+      - BearerAuth: []
+      summary: Update Contact
       tags:
-      - user
-  /task/api/v1/getlistdevices:
+      - contact
+  /task/api/v1/device/delete/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete device by its ID
+      operationId: delete_device
+      parameters:
+      - description: Device ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/handler.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/handler.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "500":
+          description: Server error
+          schema:
+            allOf:
+            - $ref: '#/definitions/handler.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Delete device by ID
+      tags:
+      - device
+  /task/api/v1/device/getlist:
     get:
       consumes:
       - application/json
@@ -703,7 +553,7 @@ paths:
       summary: Get all devices
       tags:
       - device
-  /task/api/v1/removedevice/{id}:
+  /task/api/v1/device/remove/{id}:
     delete:
       consumes:
       - application/json
@@ -747,107 +597,7 @@ paths:
               type: object
       summary: Remove device by ID
       tags:
-      - auth
-  /task/api/v1/updatecontact/{id}:
-    put:
-      consumes:
-      - application/json
-      description: Update an existing contact
-      operationId: update_contact
-      parameters:
-      - description: Contact ID
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: UpdateContactRequest
-        in: body
-        name: Contact
-        required: true
-        schema:
-          $ref: '#/definitions/models.UpdateContact'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/models.Contact'
-        "400":
-          description: Bad Request
-          schema:
-            allOf:
-            - $ref: '#/definitions/handler.Response'
-            - properties:
-                data:
-                  type: string
-              type: object
-        "404":
-          description: Contact not found
-          schema:
-            allOf:
-            - $ref: '#/definitions/handler.Response'
-            - properties:
-                data:
-                  type: string
-              type: object
-        "500":
-          description: Server error
-          schema:
-            allOf:
-            - $ref: '#/definitions/handler.Response'
-            - properties:
-                data:
-                  type: string
-              type: object
-      security:
-      - BearerAuth: []
-      summary: Update Contact
-      tags:
-      - contact
-  /task/api/v1/updateuser/{id}:
-    put:
-      consumes:
-      - application/json
-      description: Update an existing user
-      operationId: update_user
-      parameters:
-      - description: UpdateUserRequest
-        in: body
-        name: User
-        required: true
-        schema:
-          $ref: '#/definitions/models.UpdateUser'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/models.User'
-        "400":
-          description: Bad Request
-          schema:
-            allOf:
-            - $ref: '#/definitions/handler.Response'
-            - properties:
-                data:
-                  type: string
-              type: object
-        "500":
-          description: Server error
-          schema:
-            allOf:
-            - $ref: '#/definitions/handler.Response'
-            - properties:
-                data:
-                  type: string
-              type: object
-      security:
-      - BearerAuth: []
-      summary: Update User
-      tags:
-      - user
+      - device
   /task/api/v1/user/confirmotp:
     post:
       consumes:
@@ -894,6 +644,143 @@ paths:
       security:
       - BearerAuth: []
       summary: Confirm user phone_number by otp
+      tags:
+      - user
+  /task/api/v1/user/delete:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a user by their ID
+      operationId: delete_user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/handler.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/handler.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "500":
+          description: Server error
+          schema:
+            allOf:
+            - $ref: '#/definitions/handler.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Delete User by ID
+      tags:
+      - user
+  /task/api/v1/user/getall:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all users
+      operationId: get_all_users
+      parameters:
+      - description: Search users by name or email
+        in: query
+        name: search
+        type: string
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Limit number of results per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.GetAllUsersResponse'
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/handler.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "500":
+          description: Server error
+          schema:
+            allOf:
+            - $ref: '#/definitions/handler.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+      summary: Get All Users
+      tags:
+      - user
+  /task/api/v1/user/getbyid/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a user by their ID
+      operationId: get_user
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/handler.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "404":
+          description: User not found
+          schema:
+            allOf:
+            - $ref: '#/definitions/handler.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "500":
+          description: Server error
+          schema:
+            allOf:
+            - $ref: '#/definitions/handler.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+      summary: Get User by ID
       tags:
       - user
   /task/api/v1/user/loginconfirm:
@@ -1039,7 +926,7 @@ paths:
       summary: User register confirmation
       tags:
       - auth
-  /task/api/v1/user/sendcode:
+  /task/api/v1/user/registerrequest:
     post:
       consumes:
       - application/json
@@ -1119,6 +1006,49 @@ paths:
       security:
       - BearerAuth: []
       summary: update user phone_number by otp
+      tags:
+      - user
+  /task/api/v1/user/update/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Update an existing user
+      operationId: update_user
+      parameters:
+      - description: UpdateUserRequest
+        in: body
+        name: User
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateUser'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/handler.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "500":
+          description: Server error
+          schema:
+            allOf:
+            - $ref: '#/definitions/handler.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Update User
       tags:
       - user
 securityDefinitions:

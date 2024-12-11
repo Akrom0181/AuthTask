@@ -22,7 +22,7 @@ type Handler struct {
 }
 
 type Response struct {
-	Status      int         `json:"status"`
+	Status      int         `json:"Status"`
 	Description string      `json:"description"`
 	Data        interface{} `json:"data"`
 	Error       interface{} `json:"error"`
@@ -41,26 +41,26 @@ func NewStrg(log logger.LoggerI, strg storage.IStorage, cfg *config.Config, serv
 	}
 }
 
-func handleResponseLog(c *gin.Context, log logger.LoggerI, msg string, statusCode int, data interface{}) {
+func handleResponseLog(c *gin.Context, log logger.LoggerI, msg string, StatusCode int, data interface{}) {
 	resp := models.Response{}
 
-	if statusCode >= 100 && statusCode <= 199 {
+	if StatusCode >= 100 && StatusCode <= 199 {
 		resp.Description = config.ERR_INFORMATION
-	} else if statusCode >= 200 && statusCode <= 299 {
+	} else if StatusCode >= 200 && StatusCode <= 299 {
 		resp.Description = config.SUCCESS
-		log.Info("REQUEST SUCCEEDED", logger.Any("msg: ", msg), logger.Int("status: ", statusCode))
+		log.Info("REQUEST SUCCEEDED", logger.Any("msg: ", msg), logger.Int("Status: ", StatusCode))
 
-	} else if statusCode >= 300 && statusCode <= 399 {
+	} else if StatusCode >= 300 && StatusCode <= 399 {
 		resp.Description = config.ERR_REDIRECTION
-	} else if statusCode >= 400 && statusCode <= 499 {
+	} else if StatusCode >= 400 && StatusCode <= 499 {
 		resp.Description = config.ERR_BADREQUEST
-		log.Error("!!!!!!!! BAD REQUEST !!!!!!!!", logger.Any("error: ", msg), logger.Int("status: ", statusCode))
+		log.Error("!!!!!!!! BAD REQUEST !!!!!!!!", logger.Any("error: ", msg), logger.Int("Status: ", StatusCode))
 	} else {
 		resp.Description = config.ERR_INTERNAL_SERVER
-		log.Error("!!!!!!!! ERR_INTERNAL_SERVER !!!!!!!!", logger.Any("error: ", msg), logger.Int("status: ", statusCode))
+		log.Error("!!!!!!!! ERR_INTERNAL_SERVER !!!!!!!!", logger.Any("error: ", msg), logger.Int("Status: ", StatusCode))
 	}
 
-	resp.StatusCode = statusCode
+	resp.StatusCode = StatusCode
 	resp.Data = data
 
 	c.JSON(resp.StatusCode, resp)

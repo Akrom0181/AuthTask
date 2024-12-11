@@ -36,9 +36,9 @@ func New(cfg config.Config) storage.IRedisStorage {
 }
 
 func (s Store) SetX(ctx context.Context, key string, value interface{}, duration time.Duration) error {
-	statusCmd := s.db.SetEx(ctx, key, value, duration)
-	if statusCmd.Err() != nil {
-		return statusCmd.Err()
+	StatusCmd := s.db.SetEx(ctx, key, value, duration)
+	if StatusCmd.Err() != nil {
+		return StatusCmd.Err()
 	}
 
 	return nil
@@ -54,9 +54,9 @@ func (s Store) Get(ctx context.Context, key string) (interface{}, error) {
 }
 
 func (s Store) Del(ctx context.Context, key string) error {
-	statusCmd := s.db.Del(ctx, key)
-	if statusCmd.Err() != nil {
-		return statusCmd.Err()
+	StatusCmd := s.db.Del(ctx, key)
+	if StatusCmd.Err() != nil {
+		return StatusCmd.Err()
 	}
 	return nil
 }

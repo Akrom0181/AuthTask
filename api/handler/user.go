@@ -12,45 +12,44 @@ import (
 	check "task/pkg/validation"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
-// @ID 			 create_user
-// @Router       /task/api/v1/createuser [POST]
-// @Summary      Create User
-// @Description  Create a new user
-// @Tags         user
-// @Accept       json
-// @Produce      json
-// @Param        User body models.CreateUser true "User"
-// @Success      200 {object} models.User
-// @Response     400 {object} Response{data=string} "Bad Request"
-// @Failure      500 {object} Response{data=string} "Server error"
-func (h *Handler) CreateUser(c *gin.Context) {
-	var (
-		user = models.User{}
-	)
+// // @ID 			 create_user
+// // @Router       /task/api/v1/user/create [POST]
+// // @Summary      Create User
+// // @Description  Create a new user
+// // @Tags         user
+// // @Accept       json
+// // @Produce      json
+// // @Param        User body models.CreateUser true "User"
+// // @Success      200 {object} models.User
+// // @Response     400 {object} Response{data=string} "Bad Request"
+// // @Failure      500 {object} Response{data=string} "Server error"
+// func (h *Handler) CreateUser(c *gin.Context) {
+// 	var (
+// 		user = models.User{}
+// 	)
 
-	if err := c.ShouldBindJSON(&user); err != nil {
-		h.log.Error(err.Error() + " : " + "error User Should Bind Json!")
-		c.JSON(http.StatusBadRequest, "Please, enter valid data!")
-		return
-	}
+// 	if err := c.ShouldBindJSON(&user); err != nil {
+// 		h.log.Error(err.Error() + " : " + "error User Should Bind Json!")
+// 		c.JSON(http.StatusBadRequest, "Please, enter valid data!")
+// 		return
+// 	}
 
-	resp, err := h.storage.User().Create(c.Request.Context(), &user)
-	if err != nil {
-		h.log.Error(err.Error() + ":" + "Error User Create")
-		c.JSON(http.StatusInternalServerError, "Server error!")
-		return
-	}
+// 	resp, err := h.storage.User().Create(c.Request.Context(), &user)
+// 	if err != nil {
+// 		h.log.Error(err.Error() + ":" + "Error User Create")
+// 		c.JSON(http.StatusInternalServerError, "Server error!")
+// 		return
+// 	}
 
-	h.log.Info("User created successfully!")
-	c.JSON(http.StatusCreated, resp)
-}
+// 	h.log.Info("User created successfully!")
+// 	c.JSON(http.StatusCreated, resp)
+// }
 
 // @Security BearerAuth
 // @ID 			 update_user
-// @Router       /task/api/v1/updateuser/{id} [PUT]
+// @Router       /task/api/v1/user/update/{id} [PUT]
 // @Summary      Update User
 // @Description  Update an existing user
 // @Tags         user
@@ -99,7 +98,7 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 }
 
 // @ID              get_user
-// @Router          /task/api/v1/getbyiduser/{id} [GET]
+// @Router          /task/api/v1/user/getbyid/{id} [GET]
 // @Summary         Get User by ID
 // @Description     Retrieve a user by their ID
 // @Tags            user
@@ -138,7 +137,7 @@ func (h *Handler) GetUserByID(c *gin.Context) {
 }
 
 // @ID 			    get_all_users
-// @Router 			/task/api/v1/getallusers [GET]
+// @Router 			/task/api/v1/user/getall [GET]
 // @Summary 		Get All Users
 // @Description		Retrieve all users
 // @Tags 			user
@@ -185,33 +184,29 @@ func (h *Handler) GetAllUsers(c *gin.Context) {
 
 // @Security BearerAuth
 // @ID 			delete_user
-// @Router		/task/api/v1/deleteuser/{id} [DELETE]
+// @Router		/task/api/v1/user/delete [DELETE]
 // @Summary		Delete User by ID
 // @Description Delete a user by their ID
 // @Tags		user
 // @Accept		json
 // @Produce		json
-// @Param		id path string true "User ID"
 // @Success     200 {object} Response{data=string} "Success Request"
 // @Response    400 {object} Response{data=string} "Bad Request"
 // @Failure     500 {object} Response{data=string} "Server error"
 func (h *Handler) DeleteUser(c *gin.Context) {
-	id := c.Param("id")
-
-	if id == "" {
-		h.log.Error("missing user id")
-		c.JSON(http.StatusBadRequest, "fill the gap with id")
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
 
-	err := uuid.Validate(id)
-	if err != nil {
-		h.log.Error(err.Error() + ":" + "error while validating id")
-		c.JSON(http.StatusBadRequest, "please enter a valid id")
+	userIDStr, ok := userID.(string)
+	if !ok || userIDStr == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user id"})
 		return
 	}
 
-	err = h.storage.User().Delete(context.Background(), id)
+	err := h.storage.User().Delete(context.Background(), userIDStr)
 	if err != nil {
 		h.log.Error(err.Error() + ":" + "error while deleting user")
 		c.JSON(http.StatusBadRequest, "please input valid data")
@@ -219,7 +214,7 @@ func (h *Handler) DeleteUser(c *gin.Context) {
 	}
 
 	h.log.Info("User deleted successfully!")
-	c.JSON(http.StatusOK, id)
+	c.JSON(http.StatusOK, Response{Status: http.StatusOK, Data: userIDStr, Description: "user deleted successfully"})
 }
 
 // @Security BearerAuth

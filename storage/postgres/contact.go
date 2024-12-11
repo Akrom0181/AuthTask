@@ -72,26 +72,26 @@ func (c *ContactRepo) GetAll(ctx context.Context, req *models.GetAllContactsRequ
 	var (
 		created_at time.Time
 		updated_at sql.NullTime
+		filter     string
 	)
 
-	// Calculate offset based on page and limit
 	offset := (req.Page - 1) * req.Limit
+
+	if req.Search != "" {
+		filter += fmt.Sprintf(` AND (first_name ILIKE '%%%v%%' OR phone_number ILIKE '%%%v%%') `, req.Search, req.Search)
+	}
+	filter += fmt.Sprintf(" OFFSET %v LIMIT %v", offset, req.Limit)
+
+	// Calculate offset based on page and limit
 
 	// Prepare the SQL query without the filter
 	query := `SELECT count(id) OVER(), id, user_id, first_name, last_name, middle_name, phone_number, created_at, updated_at
-		FROM "contacts" WHERE user_id=$1 OFFSET $2 LIMIT $3`
+		FROM "contacts" WHERE user_id=$1` + filter
 
 	// Execute the query with the necessary parameters
-	rows, err := c.db.Query(ctx, query, user_id, offset, req.Limit)
+	rows, err := c.db.Query(ctx, query, user_id)
 	if err != nil {
 		c.log.Error("Error getting all contacts", logger.Error(err))
-		return nil, err
-	}
-
-	// Load the timezone (e.g., Asia/Tashkent)
-	location, err := time.LoadLocation("Asia/Tashkent")
-	if err != nil {
-		c.log.Error("Error loading timezone", logger.Error(err))
 		return nil, err
 	}
 
@@ -118,22 +118,22 @@ func (c *ContactRepo) GetAll(ctx context.Context, req *models.GetAllContactsRequ
 			return nil, err
 		}
 
-		// Format the dates according to the timezone
-		var formattedUpdatedAt string
-		if updated_at.Valid {
-			formattedUpdatedAt = updated_at.Time.In(location).Format("2006-01-02 15:04:05")
-		} else {
-			formattedUpdatedAt = ""
+		location, err := time.LoadLocation("Asia/Tashkent")
+		if err != nil {
+			c.log.Error("Error loading timezone", logger.Error(err))
+			return nil, fmt.Errorf("failed to load timezone: %w", err)
 		}
 
 		contact.CreatedAt = created_at.In(location).Format("2006-01-02 15:04:05")
-		contact.UpdatedAt = formattedUpdatedAt
+		if updated_at.Valid {
+			contact.UpdatedAt = updated_at.Time.Local().Format("2006-01-02 15:04:05")
+		} else {
+			contact.UpdatedAt = ""
+		}
 
-		// Append the contact to the response
 		response.Contacts = append(response.Contacts, contact)
 	}
 
-	// Check if there were any issues during iteration
 	if err := rows.Err(); err != nil {
 		c.log.Error("Error iterating over contacts", logger.Error(err))
 		return nil, err
@@ -143,21 +143,25 @@ func (c *ContactRepo) GetAll(ctx context.Context, req *models.GetAllContactsRequ
 }
 
 func (c *ContactRepo) GetById(ctx context.Context, id string, userid string) (*models.Contact, error) {
+
+	location, err := time.LoadLocation("Asia/Tashkent")
+	if err != nil {
+		c.log.Error("Error loading timezone", logger.Error(err))
+		return nil, fmt.Errorf("failed to load timezone: %w", err)
+	}
+
 	var contacts models.Contact
 	var (
 		created_at time.Time
 		updated_at sql.NullTime
 	)
 
-	// Define the SQL query
 	query := `SELECT id, user_id, first_name, last_name, middle_name, phone_number, created_at, updated_at 
 	          FROM "contacts" WHERE id = $1 AND user_id = $2`
 
-	// Log the query and parameters for debugging
-	c.log.Info("Executing query", logger.String("query", query), logger.String("contactID", id), logger.String("userID", userid))
+	// c.log.Info("Executing query", logger.String("query", query), logger.String("contactID", id), logger.String("userID", userid))
 
-	// Execute the query and scan the result
-	err := c.db.QueryRow(ctx, query, id, userid).Scan(
+	err = c.db.QueryRow(ctx, query, id, userid).Scan(
 		&contacts.ID,
 		&userid,
 		&contacts.FirstName,
@@ -176,16 +180,10 @@ func (c *ContactRepo) GetById(ctx context.Context, id string, userid string) (*m
 		return nil, fmt.Errorf("database error: %w", err)
 	}
 
-	// Format the `created_at` and `updated_at` timestamps
-	location, err := time.LoadLocation("Asia/Tashkent")
-	if err != nil {
-		c.log.Error("Error loading timezone", logger.Error(err))
-		return nil, fmt.Errorf("failed to load timezone: %w", err)
-	}
+	contacts.CreatedAt = created_at.In(location).Format("2006-01-02 15:04:05")
 
-	contacts.CreatedAt = created_at.In(location).Format("2006-01-02 15:04:05 MST")
 	if updated_at.Valid {
-		contacts.UpdatedAt = updated_at.Time.In(location).Format("2006-01-02 15:04:05 MST")
+		contacts.UpdatedAt = updated_at.Time.Local().Format("2006-01-02 15:04:05")
 	} else {
 		contacts.UpdatedAt = ""
 	}
@@ -212,15 +210,14 @@ func (c *ContactRepo) Update(ctx context.Context, contact *models.Contact, userI
 		RETURNING created_at, updated_at
 	`
 
-	// Execute query and fetch timestamps
 	var createdAt, updatedAt time.Time
 	err = c.db.QueryRow(ctx, query,
-		contact.FirstName,   // $1
-		contact.LastName,    // $2
-		contact.MiddleName,  // $3
-		contact.PhoneNumber, // $4
-		contact.ID,          // $5
-		userID,              // $6
+		contact.FirstName,
+		contact.LastName,
+		contact.MiddleName,
+		contact.PhoneNumber,
+		contact.ID,
+		userID,
 	).Scan(&createdAt, &updatedAt)
 
 	if err != nil {
@@ -228,9 +225,8 @@ func (c *ContactRepo) Update(ctx context.Context, contact *models.Contact, userI
 		return nil, fmt.Errorf("error updating contact: %w", err)
 	}
 
-	// Set updated timestamps with timezone formatting
-	contact.CreatedAt = createdAt.In(location).Format("2006-01-02 15:04:05 MST")
-	contact.UpdatedAt = updatedAt.In(location).Format("2006-01-02 15:04:05 MST")
+	contact.CreatedAt = createdAt.In(location).Format("2006-01-02 15:04:05")
+	contact.UpdatedAt = updatedAt.In(location).Format("2006-01-02 15:04:05")
 
 	return contact, nil
 }
