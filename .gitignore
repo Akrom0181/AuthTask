@@ -1,8 +1,6 @@
 # Ignore the .env file to protect sensitive information
 .env
 
-.gitignore
-
 makefile
 
 # Logs
