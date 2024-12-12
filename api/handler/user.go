@@ -56,7 +56,7 @@ import (
 // @Accept       json
 // @Produce      json
 // @Param        User body models.UpdateUser true "UpdateUserRequest"
-// @Success      200 {object} models.User
+// @Success      200 {object} Response{data=string} "Success"
 // @Response     400 {object} Response{data=string} "Bad Request"
 // @Failure      500 {object} Response{data=string} "Server error"
 func (h *Handler) UpdateUser(c *gin.Context) {
@@ -70,14 +70,19 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 
 	userID, exists := c.Get("user_id")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		c.JSON(http.StatusUnauthorized, Response{Status: http.StatusUnauthorized, Description: "unauthorized"})
 		return
 	}
 
-	user, err := h.storage.User().GetById(c.Request.Context(), userID.(string))
+	user, err := h.storage.User().GetById(context.Background(), userID.(string))
 	if err != nil {
-		h.log.Error(err.Error() + ":" + "Error User Not Found")
-		c.JSON(http.StatusBadRequest, "User not found!")
+		if err == sql.ErrNoRows {
+			h.log.Error("user not found: " + userID.(string))
+			c.JSON(http.StatusNotFound, Response{Status: http.StatusNotFound, Description: "user not found", Error: err})
+			return
+		}
+		h.log.Error("Error while getting user by ID" + err.Error())
+		c.JSON(http.StatusInternalServerError, Response{Status: http.StatusInternalServerError, Description: "error while getting user by id", Error: err})
 		return
 	}
 
@@ -89,12 +94,12 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 	resp, err := h.storage.User().Update(c.Request.Context(), user, userID.(string))
 	if err != nil {
 		h.log.Error(err.Error() + ":" + "Error User Update")
-		c.JSON(http.StatusInternalServerError, "Server error!")
+		c.JSON(http.StatusInternalServerError, Response{Status: http.StatusInternalServerError, Description: "error while updating user by id", Error: err})
 		return
 	}
 
 	h.log.Info("User updated successfully!")
-	c.JSON(http.StatusOK, resp)
+	c.JSON(http.StatusOK, Response{Status: http.StatusOK, Description: "User updated successfully", Data: resp})
 }
 
 // @ID              get_user
@@ -105,7 +110,7 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 // @Accept          json
 // @Produce         json
 // @Param           id path string true "User ID"
-// @Success         200  {object}  models.User
+// @Success         200 {object} Response{data=string} "Success"
 // @Response        400 {object} Response{data=string} "Bad Request"
 // @Failure         404 {object} Response{data=string} "User not found"
 // @Failure         500 {object} Response{data=string} "Server error"
@@ -114,26 +119,24 @@ func (h *Handler) GetUserByID(c *gin.Context) {
 
 	if id == "" {
 		h.log.Error("missing user id")
-		c.JSON(http.StatusBadRequest, "you must fill the user ID")
+		c.JSON(http.StatusBadRequest, Response{Status: http.StatusBadRequest, Description: "you must fill the user id"})
 		return
 	}
 
 	user, err := h.storage.User().GetById(context.Background(), id)
 	if err != nil {
-		// If the error is "no rows" (user not found), return 404
 		if err == sql.ErrNoRows {
 			h.log.Error("user not found: " + id)
 			c.JSON(http.StatusNotFound, fmt.Sprintf("user with ID %s not found", id))
 			return
 		}
-		// For other errors, return 500
-		h.log.Error("Error while getting user by ID: " + err.Error())
-		c.JSON(http.StatusInternalServerError, fmt.Sprintf("server error: %v", err))
+		h.log.Error("Error while getting user by ID" + err.Error())
+		c.JSON(http.StatusInternalServerError, Response{Status: http.StatusInternalServerError, Description: "error while getting user by id", Error: err})
 		return
 	}
 
 	h.log.Info("User retrieved successfully by ID")
-	c.JSON(http.StatusOK, user)
+	c.JSON(http.StatusOK, Response{Status: http.StatusOK, Description: "user retrieved successfully", Data: user})
 }
 
 // @ID 			    get_all_users
@@ -143,11 +146,13 @@ func (h *Handler) GetUserByID(c *gin.Context) {
 // @Tags 			user
 // @Accept 			json
 // @Produce 		json
-// @Param 			search query string false "Search users by name or email"
+// @Param 			search query string false "Search users by first_name or phone_number"
 // @Param 			page   query uint64 false "Page number"
 // @Param 			limit  query uint64 false "Limit number of results per page"
-// @Success 		200  {object} models.GetAllUsersResponse
+// @Success 		200 {object} Response{data=string} "Success"
 // @Response        400 {object} Response{data=string} "Bad Request"
+// @Response        401 {object} Response{data=string} "Unauthorized"
+// @Failure         404 {object} Response{data=string} "Contact not found"
 // @Failure         500 {object} Response{data=string} "Server error"
 func (h *Handler) GetAllUsers(c *gin.Context) {
 	var req = &models.GetAllUsersRequest{}
@@ -174,12 +179,12 @@ func (h *Handler) GetAllUsers(c *gin.Context) {
 	users, err := h.storage.User().GetAll(context.Background(), req)
 	if err != nil {
 		h.log.Error(err.Error() + ":" + "Error while getting all users")
-		c.JSON(http.StatusInternalServerError, "Error while getting all users")
+		c.JSON(http.StatusInternalServerError, Response{Status: http.StatusInternalServerError, Description: "error while getting all users", Error: err})
 		return
 	}
 
 	h.log.Info("Users retrieved successfully")
-	c.JSON(http.StatusOK, users)
+	c.JSON(http.StatusOK, Response{Status: http.StatusOK, Description: "users retrieved successfully", Data: users})
 }
 
 // @Security BearerAuth
@@ -192,24 +197,26 @@ func (h *Handler) GetAllUsers(c *gin.Context) {
 // @Produce		json
 // @Success     200 {object} Response{data=string} "Success Request"
 // @Response    400 {object} Response{data=string} "Bad Request"
+// @Response    401 {object} Response{data=string} "Unauthorized"
+// @Failure     404 {object} Response{data=string} "Contact not found"
 // @Failure     500 {object} Response{data=string} "Server error"
 func (h *Handler) DeleteUser(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		c.JSON(http.StatusUnauthorized, Response{Status: http.StatusUnauthorized, Description: "unauthorized"})
 		return
 	}
 
 	userIDStr, ok := userID.(string)
 	if !ok || userIDStr == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user id"})
+		c.JSON(http.StatusUnauthorized, Response{Status: http.StatusUnauthorized, Description: "invalid user_id"})
 		return
 	}
 
 	err := h.storage.User().Delete(context.Background(), userIDStr)
 	if err != nil {
 		h.log.Error(err.Error() + ":" + "error while deleting user")
-		c.JSON(http.StatusBadRequest, "please input valid data")
+		c.JSON(http.StatusInternalServerError, Response{Status: http.StatusInternalServerError, Description: "error while deleting user", Error: err})
 		return
 	}
 
@@ -228,27 +235,44 @@ func (h *Handler) DeleteUser(c *gin.Context) {
 // @Param       User body models.UserChangePhone true "User"
 // @Success     200 {object} Response{data=string} "Success Request"
 // @Response    400 {object} Response{data=string} "Bad Request"
+// @Response    401 {object} Response{data=string} "Unauthorized"
+// @Failure     404 {object} Response{data=string} "User not found"
 // @Failure     500 {object} Response{data=string} "Server error"
 func (h *Handler) RequestOTP(c *gin.Context) {
 	var req models.UserLoginRequest
 
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, Response{Status: http.StatusUnauthorized, Description: "unauthorized"})
+		return
+	}
+
+	userIDStr, ok := userID.(string)
+	if !ok || userIDStr == "" {
+		c.JSON(http.StatusUnauthorized, Response{Status: http.StatusUnauthorized, Description: "invalid user_id"})
+		return
+	}
+
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		c.JSON(http.StatusBadRequest, Response{Status: http.StatusBadRequest, Description: "invalid request", Error: err})
 		return
 	}
 
 	if err := check.ValidatePhoneNumber(req.MobilePhone); err != nil {
 		handleResponseLog(c, h.log, "error while validating phone number: "+req.MobilePhone, http.StatusBadRequest, err.Error())
+		c.JSON(http.StatusBadRequest, Response{Status: http.StatusBadRequest, Description: "please input valid phone number", Error: err})
 		return
 	}
 
-	otpMsg, err := h.service.Auth().OTPForChangingNumber(c.Request.Context(), req)
+	otpMsg, err := h.service.Auth().OTPForChangingNumber(c.Request.Context(), req, userIDStr)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate OTP"})
+		handleResponseLog(c, h.log, "Failed to generate OTP", http.StatusInternalServerError, err.Error())
+		c.JSON(http.StatusInternalServerError, Response{Status: http.StatusInternalServerError, Description: "Failed to generate OTP", Error: err})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": otpMsg})
+	// handleResponseLog(c, h.log, "successfully generated otp", http.StatusOK, err)
+	c.JSON(http.StatusOK, Response{Status: http.StatusOK, Description: "successfully generated otp", Data: otpMsg, Error: err})
 }
 
 // @Security BearerAuth
@@ -262,33 +286,38 @@ func (h *Handler) RequestOTP(c *gin.Context) {
 // @Param       User body models.UserChangePhoneConfirm true "User"
 // @Success     200 {object} Response{data=string} "Success Request"
 // @Response    400 {object} Response{data=string} "Bad Request"
+// @Response    401 {object} Response{data=string} "Unauthorized"
+// @Failure     404 {object} Response{data=string} "User not found"
 // @Failure     500 {object} Response{data=string} "Server error"
 func (h *Handler) ConfirmOTPAndUpdatePhoneNumber(c *gin.Context) {
 	var req models.UserChangePhoneConfirm
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		handleResponseLog(c, h.log, "invalid request", http.StatusBadGateway, err.Error())
+		c.JSON(http.StatusBadRequest, Response{Status: http.StatusBadGateway, Description: "invalid request", Error: err})
 		return
 	}
 
 	userID, exists := c.Get("user_id")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		c.JSON(http.StatusUnauthorized, Response{Status: http.StatusUnauthorized, Description: "please authorize"})
 		return
 	}
 
 	if err := check.ValidatePhoneNumber(req.MobilePhone); err != nil {
 		handleResponseLog(c, h.log, "error while validating phone number: "+req.MobilePhone, http.StatusBadRequest, err.Error())
+		c.JSON(http.StatusBadRequest, Response{Status: http.StatusBadRequest, Description: "error validating phone number", Data: req.MobilePhone, Error: err})
 		return
 	}
 
 	err := h.service.Auth().ConfirmOTPAndUpdatePhoneNumber(c.Request.Context(), req.MobilePhone, req.SmsCode, userID.(string))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		handleResponseLog(c, h.log, "error while confirming phone number", http.StatusInternalServerError, err.Error())
+		c.JSON(http.StatusInternalServerError, Response{Status: http.StatusInternalServerError, Description: "error while confirming phone number"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Phone number updated successfully"})
+	c.JSON(http.StatusOK, Response{Status: http.StatusOK, Description: "Phone number updated successfully", Data: req.MobilePhone})
 }
 
 // @Security BearerAuth
@@ -301,27 +330,32 @@ func (h *Handler) ConfirmOTPAndUpdatePhoneNumber(c *gin.Context) {
 // @Produce		json
 // @Success     200 {object} Response{data=string} "Success Request"
 // @Response    400 {object} Response{data=string} "Bad Request"
+// @Response    401 {object} Response{data=string} "Unauthorized"
+// @Response    409 {object} Response{data=string}    "Conflict"
 // @Failure     500 {object} Response{data=string} "Server error"
 func (h *Handler) Logout(c *gin.Context) {
 
 	userID, exists := c.Get("user_id")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		c.JSON(http.StatusUnauthorized, Response{Status: http.StatusUnauthorized, Description: "invalid request"})
 		return
 	}
 
 	deviceID, exists := c.Get("device_id")
 	log.Println(deviceID)
 	if !exists {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "device ID is required"})
+		c.JSON(http.StatusConflict, Response{Status: http.StatusConflict, Description: "device id not found"})
+
 		return
 	}
 
 	err := h.storage.Device().Delete(c.Request.Context(), deviceID.(string), userID.(string))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to log out"})
+		handleResponseLog(c, h.log, "error while logging out", http.StatusInternalServerError, err.Error())
+		c.JSON(http.StatusInternalServerError, Response{Status: http.StatusInternalServerError, Description: "failed to log out", Error: err})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "logged out successfully"})
+	handleResponseLog(c, h.log, "error while logging out", http.StatusInternalServerError, "")
+	c.JSON(http.StatusOK, Response{Status: http.StatusOK, Description: "logged out successfully"})
 }

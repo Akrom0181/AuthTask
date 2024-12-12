@@ -65,15 +65,6 @@ definitions:
       last_name:
         type: string
     type: object
-  models.GetAllUsersResponse:
-    properties:
-      count:
-        type: integer
-      users:
-        items:
-          $ref: '#/definitions/models.User'
-        type: array
-    type: object
   models.Response:
     properties:
       Status_code:
@@ -98,22 +89,6 @@ definitions:
       first_name:
         type: string
       last_name:
-        type: string
-    type: object
-  models.User:
-    properties:
-      created_at:
-        description: Contacts    []Contact `json:"contacts"`
-        type: string
-      first_name:
-        type: string
-      id:
-        type: string
-      last_name:
-        type: string
-      phone_number:
-        type: string
-      updated_at:
         type: string
     type: object
   models.UserChangePhone:
@@ -205,6 +180,15 @@ paths:
                 data:
                   type: string
               type: object
+        "401":
+          description: Unauthorized
+          schema:
+            allOf:
+            - $ref: '#/definitions/handler.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
         "500":
           description: Server error
           schema:
@@ -245,6 +229,24 @@ paths:
               type: object
         "400":
           description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/handler.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            allOf:
+            - $ref: '#/definitions/handler.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "404":
+          description: Not Found
           schema:
             allOf:
             - $ref: '#/definitions/handler.Response'
@@ -306,8 +308,8 @@ paths:
                 data:
                   type: string
               type: object
-        "404":
-          description: Contact not found
+        "401":
+          description: Unauthorized
           schema:
             allOf:
             - $ref: '#/definitions/handler.Response'
@@ -355,6 +357,15 @@ paths:
               type: object
         "400":
           description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/handler.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "401":
+          description: Unauthorized
           schema:
             allOf:
             - $ref: '#/definitions/handler.Response'
@@ -489,6 +500,24 @@ paths:
                 data:
                   type: string
               type: object
+        "401":
+          description: Unauthorized
+          schema:
+            allOf:
+            - $ref: '#/definitions/handler.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "404":
+          description: Device not found
+          schema:
+            allOf:
+            - $ref: '#/definitions/handler.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
         "500":
           description: Server error
           schema:
@@ -530,8 +559,17 @@ paths:
                 data:
                   type: string
               type: object
+        "401":
+          description: Unauthorized
+          schema:
+            allOf:
+            - $ref: '#/definitions/handler.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
         "404":
-          description: Contact not found
+          description: Device not found
           schema:
             allOf:
             - $ref: '#/definitions/handler.Response'
@@ -586,6 +624,15 @@ paths:
                 data:
                   type: string
               type: object
+        "401":
+          description: Unauthorized
+          schema:
+            allOf:
+            - $ref: '#/definitions/handler.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
         "500":
           description: Server error
           schema:
@@ -625,6 +672,24 @@ paths:
               type: object
         "400":
           description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/handler.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            allOf:
+            - $ref: '#/definitions/handler.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "404":
+          description: User not found
           schema:
             allOf:
             - $ref: '#/definitions/handler.Response'
@@ -673,6 +738,24 @@ paths:
                 data:
                   type: string
               type: object
+        "401":
+          description: Unauthorized
+          schema:
+            allOf:
+            - $ref: '#/definitions/handler.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "404":
+          description: Contact not found
+          schema:
+            allOf:
+            - $ref: '#/definitions/handler.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
         "500":
           description: Server error
           schema:
@@ -694,7 +777,7 @@ paths:
       description: Retrieve all users
       operationId: get_all_users
       parameters:
-      - description: Search users by name or email
+      - description: Search users by first_name or phone_number
         in: query
         name: search
         type: string
@@ -710,11 +793,34 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Success
           schema:
-            $ref: '#/definitions/models.GetAllUsersResponse'
+            allOf:
+            - $ref: '#/definitions/handler.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
         "400":
           description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/handler.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            allOf:
+            - $ref: '#/definitions/handler.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "404":
+          description: Contact not found
           schema:
             allOf:
             - $ref: '#/definitions/handler.Response'
@@ -750,9 +856,14 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Success
           schema:
-            $ref: '#/definitions/models.User'
+            allOf:
+            - $ref: '#/definitions/handler.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
         "400":
           description: Bad Request
           schema:
@@ -878,6 +989,24 @@ paths:
                 data:
                   type: string
               type: object
+        "401":
+          description: Unauthorized
+          schema:
+            allOf:
+            - $ref: '#/definitions/handler.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "409":
+          description: Conflict
+          schema:
+            allOf:
+            - $ref: '#/definitions/handler.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
         "500":
           description: Server error
           schema:
@@ -994,6 +1123,24 @@ paths:
                 data:
                   type: string
               type: object
+        "401":
+          description: Unauthorized
+          schema:
+            allOf:
+            - $ref: '#/definitions/handler.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "404":
+          description: User not found
+          schema:
+            allOf:
+            - $ref: '#/definitions/handler.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
         "500":
           description: Server error
           schema:
@@ -1025,9 +1172,14 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Success
           schema:
-            $ref: '#/definitions/models.User'
+            allOf:
+            - $ref: '#/definitions/handler.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
         "400":
           description: Bad Request
           schema:

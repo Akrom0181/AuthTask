@@ -44,7 +44,6 @@ func (u *UserRepo) Create(ctx context.Context, user *models.User) (*models.User,
 		return &models.User{}, err
 	}
 
-	// Load the timezone (e.g., Asia/Tashkent)
 	location, err := time.LoadLocation("Asia/Tashkent")
 	if err != nil {
 		u.log.Error("Error loading timezone", logger.Error(err))
@@ -62,7 +61,6 @@ func (u *UserRepo) Create(ctx context.Context, user *models.User) (*models.User,
 	}, nil
 }
 
-// GetByID retrieves a user by their ID
 func (r *UserRepo) GetById(ctx context.Context, id string) (*models.User, error) {
 	var user models.User
 	var (
@@ -87,17 +85,14 @@ func (r *UserRepo) GetById(ctx context.Context, id string) (*models.User, error)
 		return nil, err
 	}
 
-	// Load the timezone (e.g., Asia/Tashkent)
 	location, err := time.LoadLocation("Asia/Tashkent")
 	if err != nil {
 		r.log.Error("Error loading timezone", logger.Error(err))
 		return nil, err
 	}
 
-	// Format created_at to the desired format and timezone
 	formattedCreatedAt := created_at.In(location).Format("2006-01-02 15:04:05")
 
-	// Format updated_at if it is not null
 	var formattedUpdatedAt string
 	if updated_at.Valid {
 		formattedUpdatedAt = updated_at.Time.In(location).Format("2006-01-02 15:04:05")
@@ -105,40 +100,34 @@ func (r *UserRepo) GetById(ctx context.Context, id string) (*models.User, error)
 		formattedUpdatedAt = ""
 	}
 
-	// Assign formatted values to user model
 	user.CreatedAt = formattedCreatedAt
 	user.UpdatedAt = formattedUpdatedAt
 
 	return &user, nil
 }
 
-// GetAll retrieves all users with optional filters (e.g., search, pagination)
 func (u *UserRepo) GetAll(ctx context.Context, req *models.GetAllUsersRequest) (*models.GetAllUsersResponse, error) {
 	var response models.GetAllUsersResponse
 	var (
-		created_at time.Time
+		created_at sql.NullTime
 		updated_at sql.NullTime
+		filter     string
 	)
+
 	offset := (req.Page - 1) * req.Limit
-	filter := ""
 
 	if req.Search != "" {
-		filter = fmt.Sprintf(` WHERE (first_name ILIKE '%%%v%%' OR phone_number ILIKE '%%%v%%' )`, req.Search, req.Search)
+		filter = fmt.Sprintf(` AND (first_name ILIKE '%%%v%%' OR phone_number ILIKE '%%%v%%')`, req.Search, req.Search)
 	}
 
-	query := fmt.Sprintf(`SELECT count(id) OVER(), id, first_name, last_name, phone_number, created_at, updated_at
-		FROM "users" %s OFFSET $1 LIMIT $2`, filter)
+	filter += fmt.Sprintf(" OFFSET %v LIMIT %v", offset, req.Limit)
 
-	rows, err := u.db.Query(ctx, query, offset, req.Limit)
+	query := `SELECT count(id) OVER(), id, first_name, last_name, phone_number, created_at, updated_at
+		FROM "users" WHERE 1=1` + filter
+
+	rows, err := u.db.Query(ctx, query)
 	if err != nil {
 		u.log.Error("Error getting all users", logger.Error(err))
-		return nil, err
-	}
-
-	// Load the timezone (e.g., Asia/Tashkent)
-	location, err := time.LoadLocation("Asia/Tashkent")
-	if err != nil {
-		u.log.Error("Error loading timezone", logger.Error(err))
 		return nil, err
 	}
 
@@ -146,7 +135,7 @@ func (u *UserRepo) GetAll(ctx context.Context, req *models.GetAllUsersRequest) (
 
 	for rows.Next() {
 		var user models.User
-		// Scan into time.Time first for created_at and updated_at
+
 		err := rows.Scan(
 			&response.Count,
 			&user.ID,
@@ -160,15 +149,19 @@ func (u *UserRepo) GetAll(ctx context.Context, req *models.GetAllUsersRequest) (
 			u.log.Error("Error scanning user", logger.Error(err))
 			return nil, err
 		}
-		var formattedUpdatedAt string
-		if updated_at.Valid {
-			formattedUpdatedAt = updated_at.Time.In(location).Format("2006-01-02 15:04:05")
+
+		if created_at.Valid {
+			user.CreatedAt = created_at.Time.Format("2006-01-02 15:04:05")
 		} else {
-			formattedUpdatedAt = ""
+			user.CreatedAt = ""
 		}
-		// Convert time.Time to the desired format and timezone
-		user.CreatedAt = created_at.In(location).Format("2006-01-02 15:04:05")
-		user.UpdatedAt = formattedUpdatedAt
+
+		if updated_at.Valid {
+			user.UpdatedAt = updated_at.Time.Local().Format("2006-01-02 15:04:05")
+		} else {
+			user.UpdatedAt = ""
+		}
+
 		response.Users = append(response.Users, user)
 	}
 
@@ -201,14 +194,12 @@ func (u *UserRepo) Update(ctx context.Context, user *models.User, user_id string
 		u.log.Error("Error updating user", logger.Error(err))
 		return nil, err
 	}
-	// Load the timezone (e.g., Asia/Tashkent)
 	location, err := time.LoadLocation("Asia/Tashkent")
 	if err != nil {
 		u.log.Error("Error loading timezone", logger.Error(err))
 		return nil, err
 	}
 
-	// Format created_at to the desired format and timezone
 	formattedCreatedAt := created_at.In(location).Format("2006-01-02 15:04:05")
 	formattedUpdatedAt := updated_at.In(location).Format("2006-01-02 15:04:05")
 
@@ -246,9 +237,9 @@ func (r *UserRepo) Delete(ctx context.Context, id string) error {
 	deleteContactQuery := `DELETE FROM "contacts" WHERE user_id = $1`
 	_, err = tx.Exec(ctx, deleteContactQuery, id)
 	if err != nil {
-		r.log.Error("Error deleting contact", logger.Error(err))
+		r.log.Error("Error deleting user", logger.Error(err))
 		tx.Rollback(ctx)
-		return fmt.Errorf("failed to delete contact: %w", err)
+		return fmt.Errorf("failed to delete user: %w", err)
 	}
 
 	err = tx.Commit(ctx)

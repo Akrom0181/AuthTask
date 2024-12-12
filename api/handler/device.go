@@ -58,19 +58,20 @@ import (
 // @Produce 		json
 // @Success 		200 {object} Response{data=string} "Successfully retrieved devices"
 // @Response        400 {object} Response{data=string} "Bad Request"
-// @Failure         404 {object} Response{data=string} "Contact not found"
+// @Response        401 {object} Response{data=string} "Unauthorized"
+// @Failure         404 {object} Response{data=string} "Device not found"
 // @Failure         500 {object} Response{data=string} "Server error"
 func (h *Handler) GetAllDevices(c *gin.Context) {
 
 	userID, exists := c.Get("user_id")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		c.JSON(http.StatusUnauthorized, Response{Status: http.StatusUnauthorized, Description: "unauthorized"})
 		return
 	}
 
 	userIDStr, ok := userID.(string)
 	if !ok || userIDStr == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user ID"})
+		c.JSON(http.StatusUnauthorized, Response{Status: http.StatusUnauthorized, Description: "unauthorized"})
 		return
 	}
 
@@ -100,25 +101,27 @@ func (h *Handler) GetAllDevices(c *gin.Context) {
 // @Param		id path string true "Device ID"
 // @Success     200 {object} Response{data=string} "Success Request"
 // @Response    400 {object} Response{data=string} "Bad Request"
+// @Response    401 {object} Response{data=string} "Unauthorized"
+// @Failure     404 {object} Response{data=string} "Device not found"
 // @Failure     500 {object} Response{data=string} "Server error"
 func (h *Handler) DeleteDevice(c *gin.Context) {
 	id := c.Param("id")
 
 	userID, exists := c.Get("user_id")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		c.JSON(http.StatusUnauthorized, Response{Status: http.StatusUnauthorized, Description: "unauthorized"})
 		return
 	}
 
 	userIDStr, ok := userID.(string)
 	if !ok || userIDStr == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user id"})
+		c.JSON(http.StatusUnauthorized, Response{Status: http.StatusUnauthorized, Description: "unauthorized"})
 		return
 	}
 
 	if id == "" {
 		h.log.Error("missing device id")
-		c.JSON(http.StatusBadRequest, "fill the gap with id")
+		c.JSON(http.StatusBadRequest, Response{Status: http.StatusBadRequest, Description: "you must fill the user id"})
 		return
 	}
 
@@ -170,20 +173,21 @@ func (h *Handler) DeleteDevice(c *gin.Context) {
 // @Param		id path string true "Device ID"
 // @Success     200 {object} Response{data=string} "Success Request"
 // @Response    400 {object} Response{data=string} "Bad Request"
+// @Response    401 {object} Response{data=string} "Unauthorized"
 // @Failure     500 {object} Response{data=string} "Server error"
 func (h *Handler) RemoveDevice(c *gin.Context) {
 	id := c.Param("id")
 
 	if id == "" {
 		h.log.Error("missing device id")
-		c.JSON(http.StatusBadRequest, "fill the gap with id")
+		c.JSON(http.StatusBadRequest, Response{Status: http.StatusBadRequest, Description: "you must fill the user id"})
 		return
 	}
 
 	err := uuid.Validate(id)
 	if err != nil {
 		h.log.Error(err.Error() + ":" + "error while validating id")
-		c.JSON(http.StatusBadRequest, "please enter a valid id")
+		c.JSON(http.StatusBadRequest, Response{Status: http.StatusBadRequest, Description: "please enter a valid id", Error: err})
 		return
 	}
 

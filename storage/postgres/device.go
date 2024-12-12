@@ -63,12 +63,11 @@ func (s *DeviceRepo) Insert(ctx context.Context, device *models.Device) (*models
 		s.log.Error("Error loading timezone", logger.Error(err))
 		return nil, fmt.Errorf("timezone error: %w", err)
 	}
-	device.CreatedAt = created_at.In(location).Format("2006-01-02 15:04:05 MST")
+	device.CreatedAt = created_at.In(location).Format("2006-01-02 15:04:05")
 
 	return device, nil
 }
 
-// GetAll retrieves all devices for a given user ID
 func (s *DeviceRepo) GetAll(ctx context.Context, userId string) (*[]models.Device, error) {
 
 	query := `
@@ -112,7 +111,6 @@ func (s *DeviceRepo) GetAll(ctx context.Context, userId string) (*[]models.Devic
 	return &devices, nil
 }
 
-// GetDeviceCount returns the number of devices associated with a given user
 func (s *DeviceRepo) GetDeviceCount(ctx context.Context, userId string) (int, error) {
 	query := `
 		SELECT COUNT(*) FROM "devices"
@@ -128,7 +126,6 @@ func (s *DeviceRepo) GetDeviceCount(ctx context.Context, userId string) (int, er
 	return count, nil
 }
 
-// Delete deletes a device by its ID
 func (s *DeviceRepo) Delete(ctx context.Context, deviceId, userid string) error {
 	query := `
 		DELETE FROM "devices"
@@ -143,7 +140,6 @@ func (s *DeviceRepo) Delete(ctx context.Context, deviceId, userid string) error 
 	return nil
 }
 
-// Remove removes a device by its ID
 func (s *DeviceRepo) Remove(ctx context.Context, deviceId string) error {
 	query := `
 		DELETE FROM "devices"

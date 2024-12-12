@@ -54,7 +54,7 @@ func (r *ContactRepo) Create(ctx context.Context, contact *models.Contact) (*mod
 		return nil, err
 	}
 
-	formattedCreatedAt := createdAt.Format("2006-01-02 15:04:05 MST")
+	formattedCreatedAt := createdAt.Format("2006-01-02 15:04:05")
 
 	return &models.Contact{
 		ID:          id.String(),
@@ -70,7 +70,7 @@ func (r *ContactRepo) Create(ctx context.Context, contact *models.Contact) (*mod
 func (c *ContactRepo) GetAll(ctx context.Context, req *models.GetAllContactsRequest, user_id string) (*models.GetAllContactsResponse, error) {
 	var response models.GetAllContactsResponse
 	var (
-		created_at time.Time
+		created_at sql.NullTime
 		updated_at sql.NullTime
 		filter     string
 	)
@@ -82,13 +82,9 @@ func (c *ContactRepo) GetAll(ctx context.Context, req *models.GetAllContactsRequ
 	}
 	filter += fmt.Sprintf(" OFFSET %v LIMIT %v", offset, req.Limit)
 
-	// Calculate offset based on page and limit
-
-	// Prepare the SQL query without the filter
 	query := `SELECT count(id) OVER(), id, user_id, first_name, last_name, middle_name, phone_number, created_at, updated_at
 		FROM "contacts" WHERE user_id=$1` + filter
 
-	// Execute the query with the necessary parameters
 	rows, err := c.db.Query(ctx, query, user_id)
 	if err != nil {
 		c.log.Error("Error getting all contacts", logger.Error(err))
@@ -97,11 +93,9 @@ func (c *ContactRepo) GetAll(ctx context.Context, req *models.GetAllContactsRequ
 
 	defer rows.Close()
 
-	// Iterate over the query result rows
 	for rows.Next() {
 		var contact models.Contact
 
-		// Scan the row into the contact struct
 		err := rows.Scan(
 			&response.Count,
 			&contact.ID,
@@ -118,13 +112,12 @@ func (c *ContactRepo) GetAll(ctx context.Context, req *models.GetAllContactsRequ
 			return nil, err
 		}
 
-		location, err := time.LoadLocation("Asia/Tashkent")
-		if err != nil {
-			c.log.Error("Error loading timezone", logger.Error(err))
-			return nil, fmt.Errorf("failed to load timezone: %w", err)
+		if created_at.Valid {
+			contact.CreatedAt = created_at.Time.Format("2006-01-02 15:04:05")
+		} else {
+			contact.UpdatedAt = ""
 		}
 
-		contact.CreatedAt = created_at.In(location).Format("2006-01-02 15:04:05")
 		if updated_at.Valid {
 			contact.UpdatedAt = updated_at.Time.Local().Format("2006-01-02 15:04:05")
 		} else {
@@ -144,24 +137,16 @@ func (c *ContactRepo) GetAll(ctx context.Context, req *models.GetAllContactsRequ
 
 func (c *ContactRepo) GetById(ctx context.Context, id string, userid string) (*models.Contact, error) {
 
-	location, err := time.LoadLocation("Asia/Tashkent")
-	if err != nil {
-		c.log.Error("Error loading timezone", logger.Error(err))
-		return nil, fmt.Errorf("failed to load timezone: %w", err)
-	}
-
 	var contacts models.Contact
 	var (
-		created_at time.Time
+		created_at sql.NullTime
 		updated_at sql.NullTime
 	)
 
 	query := `SELECT id, user_id, first_name, last_name, middle_name, phone_number, created_at, updated_at 
 	          FROM "contacts" WHERE id = $1 AND user_id = $2`
 
-	// c.log.Info("Executing query", logger.String("query", query), logger.String("contactID", id), logger.String("userID", userid))
-
-	err = c.db.QueryRow(ctx, query, id, userid).Scan(
+	err := c.db.QueryRow(ctx, query, id, userid).Scan(
 		&contacts.ID,
 		&userid,
 		&contacts.FirstName,
@@ -180,7 +165,11 @@ func (c *ContactRepo) GetById(ctx context.Context, id string, userid string) (*m
 		return nil, fmt.Errorf("database error: %w", err)
 	}
 
-	contacts.CreatedAt = created_at.In(location).Format("2006-01-02 15:04:05")
+	if created_at.Valid {
+		contacts.CreatedAt = created_at.Time.Format("2006-01-02 15:04:05")
+	} else {
+		contacts.CreatedAt = ""
+	}
 
 	if updated_at.Valid {
 		contacts.UpdatedAt = updated_at.Time.Local().Format("2006-01-02 15:04:05")
@@ -210,7 +199,10 @@ func (c *ContactRepo) Update(ctx context.Context, contact *models.Contact, userI
 		RETURNING created_at, updated_at
 	`
 
-	var createdAt, updatedAt time.Time
+	var (
+		createdAt sql.NullTime
+		updatedAt time.Time
+	)
 	err = c.db.QueryRow(ctx, query,
 		contact.FirstName,
 		contact.LastName,
@@ -225,7 +217,7 @@ func (c *ContactRepo) Update(ctx context.Context, contact *models.Contact, userI
 		return nil, fmt.Errorf("error updating contact: %w", err)
 	}
 
-	contact.CreatedAt = createdAt.In(location).Format("2006-01-02 15:04:05")
+	contact.CreatedAt = createdAt.Time.Format("2006-01-02 15:04:05")
 	contact.UpdatedAt = updatedAt.In(location).Format("2006-01-02 15:04:05")
 
 	return contact, nil

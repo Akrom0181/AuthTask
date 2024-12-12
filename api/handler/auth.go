@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"task/api/models"
 	check "task/pkg/validation"
 
@@ -26,23 +25,35 @@ func (h *Handler) SendCode(c *gin.Context) {
 	loginReq := models.UserRegisterRequest{}
 
 	if err := c.ShouldBindJSON(&loginReq); err != nil {
-		handleResponseLog(c, h.log, "error while binding body", http.StatusBadRequest, err)
+		handleResponseLog(c, h.log, "error while binding body", http.StatusBadRequest, err.Error())
+		c.JSON(http.StatusBadRequest, Response{Status: http.StatusBadRequest, Description: "error while binding body", Data: &loginReq, Error: err.Error()})
 		return
 	}
-	fmt.Println("loginReq: ", loginReq)
 
 	if err := check.ValidatePhoneNumber(loginReq.MobilePhone); err != nil {
 		handleResponseLog(c, h.log, "error while validating phone number: "+loginReq.MobilePhone, http.StatusBadRequest, err.Error())
+		c.JSON(http.StatusBadRequest, Response{Status: http.StatusBadRequest,
+			Description: "error validating phone number",
+			Data:        loginReq.MobilePhone,
+			Error:       err.Error()})
 		return
 	}
 
 	otp, err := h.service.Auth().UserRegister(c.Request.Context(), loginReq)
 	if err != nil {
-		handleResponseLog(c, h.log, "error while sending sms code to "+loginReq.MobilePhone, http.StatusInternalServerError, err)
+		handleResponseLog(c, h.log, "error while sending sms code to "+loginReq.MobilePhone, http.StatusInternalServerError, err.Error())
+		c.JSON(http.StatusInternalServerError, Response{
+			Status:      http.StatusInternalServerError,
+			Description: "error while sending otp code",
+			Data:        otp,
+			Error:       err.Error(),
+		})
 		return
 	}
 
 	handleResponseLog(c, h.log, "Otp sent successfull", http.StatusOK, otp)
+	c.JSON(http.StatusOK, Response{Status: http.StatusOK, Description: "sending otp code successfully", Data: otp})
+
 }
 
 // UserRegisterConfirm godoc
@@ -63,16 +74,16 @@ func (h *Handler) Register(c *gin.Context) {
 	// Bind incoming JSON to the request struct
 	if err := c.ShouldBindJSON(&req); err != nil {
 		handleResponseLog(c, h.log, "error while binding body", http.StatusBadRequest, err.Error())
+		c.JSON(http.StatusBadRequest, Response{Status: http.StatusBadRequest, Description: "error while binding body", Data: &req, Error: err.Error()})
 		return
 	}
 
-	// Log the request
-	// h.log.Debug("Received registration request", "mobile_phone", req.MobilePhone)
-
-	// Validate phone number
 	if err := check.ValidatePhoneNumber(req.MobilePhone); err != nil {
-		// h.log.Error()
 		handleResponseLog(c, h.log, "error validating phone number", http.StatusBadRequest, err.Error())
+		c.JSON(http.StatusBadRequest, Response{Status: http.StatusBadRequest,
+			Description: "error validating phone number",
+			Data:        req.MobilePhone,
+			Error:       err.Error()})
 		return
 	}
 
@@ -83,19 +94,15 @@ func (h *Handler) Register(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, Response{
 			Status:      http.StatusInternalServerError,
 			Description: "Failed to confirm user registration",
-			Data:        err.Error() + ":" + "error while confirming user registration",
+			Data:        confResp,
+			Error:       err.Error(),
 		})
 		return
 	}
 
-	// Log and return success response
 	handleResponseLog(c, h.log, "User registration confirmed successfully", http.StatusOK, confResp)
+	c.JSON(http.StatusOK, Response{Status: http.StatusOK, Description: "User registration confirmed successfully!", Data: confResp})
 }
-
-/*
-	h.log.Error("missing device id")
-	c.JSON(http.StatusBadRequest, "fill the gap with id")
-*/
 
 // UserLogin godoc
 // @Router       /task/api/v1/user/loginrequest [POST]
@@ -113,23 +120,26 @@ func (h *Handler) UserLogin(c *gin.Context) {
 	loginReq := models.UserLoginRequest{}
 
 	if err := c.ShouldBindJSON(&loginReq); err != nil {
-		handleResponseLog(c, h.log, "error while binding body", http.StatusInternalServerError, err)
+		handleResponseLog(c, h.log, "error while binding body", http.StatusInternalServerError, err.Error())
+		c.JSON(http.StatusBadRequest, Response{Status: http.StatusBadRequest, Description: "error while binding body", Data: &loginReq, Error: err.Error()})
 		return
 	}
 
 	if err := check.ValidatePhoneNumber(loginReq.MobilePhone); err != nil {
 		handleResponseLog(c, h.log, "error while validating phone number: "+loginReq.MobilePhone, http.StatusBadRequest, err.Error())
+		c.JSON(http.StatusBadRequest, Response{Status: http.StatusBadRequest, Description: "error validating phone number", Data: loginReq.MobilePhone, Error: err.Error()})
 		return
 	}
 
 	loginResp, err := h.service.Auth().UserLoginSendOTP(c.Request.Context(), loginReq)
 	if err != nil {
-		handleResponseLog(c, h.log, "unauthorized", http.StatusUnauthorized, err)
+		handleResponseLog(c, h.log, "error while sending otp", http.StatusInternalServerError, err.Error())
+		c.JSON(http.StatusInternalServerError, Response{Status: http.StatusInternalServerError, Description: "error while sending otp", Error: err.Error()})
 		return
 	}
 
 	handleResponseLog(c, h.log, "Success", http.StatusOK, loginResp)
-
+	c.JSON(http.StatusOK, Response{Status: http.StatusOK, Description: "successfully sent otp", Data: loginResp})
 }
 
 // UserLoginByPhoneConfirm godoc
@@ -147,72 +157,75 @@ func (h *Handler) UserLogin(c *gin.Context) {
 func (h *Handler) UserLoginByPhoneConfirm(c *gin.Context) {
 	var req models.UserLoginPhoneConfirmRequest
 
-	// Bind the incoming request body to req
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.log.Error("error while binding request body: " + err.Error())
-		c.JSON(http.StatusBadRequest, models.Response{
-			StatusCode:  http.StatusBadRequest,
-			Description: err.Error(),
+		c.JSON(http.StatusBadRequest, Response{
+			Status:      http.StatusBadRequest,
+			Description: "error while binding request body",
+			Data:        &req,
+			Error:       err.Error(),
 		})
 		return
 	}
 
-	// Validate the phone number
 	if err := check.ValidatePhoneNumber(req.MobilePhone); err != nil {
 		handleResponseLog(c, h.log, "error validating phone number", http.StatusBadRequest, err.Error())
+		c.JSON(http.StatusBadRequest, Response{
+			Status:      http.StatusBadRequest,
+			Description: "error validating phone number",
+			Data:        req.MobilePhone,
+			Error:       err.Error()})
 		return
 	}
 
-	// Fetch the UserID based on the phone number
 	user, err := h.storage.User().GetByPhone(c.Request.Context(), req.MobilePhone)
 	if err != nil {
 		h.log.Error("error fetching user by phone number: " + err.Error())
-		c.JSON(http.StatusUnauthorized, models.Response{
-			StatusCode:  http.StatusUnauthorized,
+		c.JSON(http.StatusUnauthorized, Response{
+			Status:      http.StatusUnauthorized,
 			Description: "User not found or phone number not registered",
+			Error:       err.Error(),
 		})
 		return
 	}
 
-	// Check the count of devices associated with the user
 	deviceCount, err := h.storage.Device().GetDeviceCount(c.Request.Context(), user.ID)
 	if err != nil {
 		h.log.Error("error getting device count: " + err.Error())
-		c.JSON(http.StatusInternalServerError, models.Response{
-			StatusCode:  http.StatusInternalServerError,
+		c.JSON(http.StatusInternalServerError, Response{
+			Status:      http.StatusInternalServerError,
 			Description: "Error checking device count",
+			Error:       err.Error(),
 		})
 		return
 	}
 
-	// If the user has more than 3 devices, prompt them to delete one
 	if deviceCount >= 3 {
-		c.JSON(http.StatusBadRequest, models.Response{
-			StatusCode:  http.StatusBadRequest,
+		c.JSON(http.StatusBadRequest, Response{
+			Status:      http.StatusBadRequest,
 			Description: "You have exceeded the device limit. Please delete one of your devices to proceed.",
 		})
 		return
 	}
 
-	// Proceed with login process after confirming OTP
 	resp, err := h.service.Auth().UserLoginByPhoneConfirm(c.Request.Context(), req)
 	if err != nil {
-		StatusCode := http.StatusInternalServerError
-		message := "INTERNAL_SERVER_ERROR" + err.Error()
+		c.JSON(http.StatusInternalServerError, Response{Status: http.StatusInternalServerError, Description: "error while sending otp", Error: err.Error()})
 
 		if err.Error() == "OTP code not found or expired time" || err.Error() == "Incorrect OTP code" || err.Error() == "OTP data not found in Redis" {
-			StatusCode = http.StatusBadRequest
-			message = err.Error()
+			c.JSON(http.StatusBadRequest, Response{Status: http.StatusBadRequest, Description: "error on otp code", Error: err})
+
 		}
 
 		h.log.Error("error in UserLoginByPhoneConfirm: " + err.Error())
-		c.JSON(StatusCode, models.Response{
-			StatusCode:  StatusCode,
-			Description: message,
+		c.JSON(http.StatusInternalServerError, Response{
+			Status:      http.StatusInternalServerError,
+			Description: "error in user loggin by phoneconfirm",
+			Error:       err.Error(),
 		})
 		return
 	}
 
-	h.log.Info("Successfully logged in by phone")
-	c.JSON(http.StatusOK, resp)
+	h.log.Info("Successfully logged in by phone number")
+	c.JSON(http.StatusOK, Response{Status: http.StatusOK, Description: "successfully logged in by phone number", Data: resp})
 }

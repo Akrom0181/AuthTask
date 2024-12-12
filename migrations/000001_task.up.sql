@@ -1,15 +1,3 @@
-Create TABLE IF NOT EXISTS "contacts" (
-    id UUID PRIMARY KEY,
-    user_id UUID REFERENCES "users"(id), 
-    first_name VARCHAR(55) not null,
-    last_name VARCHAR(55) not null,
-    middle_name VARCHAR(55) not null,
-    phone_number VARCHAR(55) UNIQUE not null,
-    created_at TIMESTAMP Default now(),
-    updated_at TIMESTAMP,
-    deleted_at TIMESTAMP
-);
-
 CREATE TABLE IF NOT EXISTS "users" (
     id UUID PRIMARY KEY, 
     first_name VARCHAR(50) NOT NULL,
@@ -18,6 +6,19 @@ CREATE TABLE IF NOT EXISTS "users" (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP
 );
+
+Create TABLE IF NOT EXISTS "contacts" (
+    id UUID PRIMARY KEY,
+    user_id UUID REFERENCES "users"(id), 
+    first_name VARCHAR(55) not null,
+    last_name VARCHAR(55) not null,
+    middle_name VARCHAR(55) not null,
+    phone_number VARCHAR(55) UNIQUE not null,
+    created_at TIMESTAMP Default now(),
+    updated_at TIMESTAMP
+);
+
+CREATE TYPE device_type AS ENUM ('android', 'iOS');
 
 CREATE TABLE IF NOT EXISTS "devices" (
     id UUID PRIMARY KEY,
@@ -33,7 +34,6 @@ CREATE TABLE IF NOT EXISTS "devices" (
     FOREIGN KEY (user_id) REFERENCES "users"(id) ON DELETE CASCADE 
 );
 
-CREATE TYPE device_type AS ENUM ('android', 'iOS');
 
 CREATE INDEX idx_user_id ON devices(user_id);
 CREATE INDEX idx_type ON devices(type); 

@@ -1,11 +1,11 @@
 package api
 
 import (
-
 	"net/http"
 	"strings"
 	_ "task/api/docs"
 	"task/api/handler"
+	"task/api/models"
 	"task/config"
 	"task/pkg/jwt"
 	"task/pkg/logger"
@@ -90,14 +90,14 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "missing authorization header"})
+			c.JSON(http.StatusUnauthorized, models.Response{StatusCode: http.StatusUnauthorized, Description: "missing authorization header"})
 			c.Abort()
 			return
 		}
 
 		const bearerPrefix = "Bearer "
 		if !strings.HasPrefix(authHeader, bearerPrefix) {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid authorization header format"})
+			c.JSON(http.StatusUnauthorized, models.Response{StatusCode: http.StatusUnauthorized, Description: "invalid authorization header format", Data: "token should start with Bearer "})
 			c.Abort()
 			return
 		}
@@ -106,7 +106,7 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 
 		claims, err := jwt.VerifyJWT(tokenString)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid or expired token", "details": err.Error()})
+			c.JSON(http.StatusUnauthorized, models.Response{StatusCode: http.StatusUnauthorized, Description: "invalid or expired token", Data: nil})
 			c.Abort()
 			return
 		}
@@ -114,7 +114,7 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 		// Extract user_id directly as a string (not as a map)
 		userID, ok := claims["user_id"].(string)
 		if !ok || userID == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token claims: user_id is not a valid string"})
+			c.JSON(http.StatusUnauthorized, models.Response{StatusCode: http.StatusUnauthorized, Description: "invalid token claims: user_id is not a valid string", Data: userID})
 			c.Abort()
 			return
 		}
@@ -130,5 +130,3 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 		c.Next()
 	}
 }
-
-

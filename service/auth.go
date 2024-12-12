@@ -31,7 +31,7 @@ func NewAuthService(storage storage.IStorage, log logger.LoggerI, redis storage.
 	}
 }
 
-func (a authService) OTPForChangingNumber(ctx context.Context, loginRequest models.UserLoginRequest) (string, error) {
+func (a authService) OTPForChangingNumber(ctx context.Context, loginRequest models.UserLoginRequest, id string) (string, error) {
 	fmt.Println(" loginRequest.Login: ", loginRequest.MobilePhone)
 
 	otpCode := pkg.GenerateOTP()
