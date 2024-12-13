@@ -120,25 +120,25 @@ func (h *Handler) UserLogin(c *gin.Context) {
 	loginReq := models.UserLoginRequest{}
 
 	if err := c.ShouldBindJSON(&loginReq); err != nil {
-		handleResponseLog(c, h.log, "error while binding body", http.StatusInternalServerError, err.Error())
+		h.log.Error("error while binding body: " + err.Error())
 		c.JSON(http.StatusBadRequest, Response{Status: http.StatusBadRequest, Description: "error while binding body", Data: &loginReq, Error: err.Error()})
 		return
 	}
 
 	if err := check.ValidatePhoneNumber(loginReq.MobilePhone); err != nil {
-		handleResponseLog(c, h.log, "error while validating phone number: "+loginReq.MobilePhone, http.StatusBadRequest, err.Error())
+		h.log.Error("error while validating phone number: " + loginReq.MobilePhone + err.Error())
 		c.JSON(http.StatusBadRequest, Response{Status: http.StatusBadRequest, Description: "error validating phone number", Data: loginReq.MobilePhone, Error: err.Error()})
 		return
 	}
 
 	loginResp, err := h.service.Auth().UserLoginSendOTP(c.Request.Context(), loginReq)
 	if err != nil {
-		handleResponseLog(c, h.log, "error while sending otp", http.StatusInternalServerError, err.Error())
+		h.log.Error("error while sending otp" + err.Error())
 		c.JSON(http.StatusInternalServerError, Response{Status: http.StatusInternalServerError, Description: "error while sending otp", Error: err.Error()})
 		return
 	}
 
-	handleResponseLog(c, h.log, "Success", http.StatusOK, loginResp)
+	h.log.Info("successfully sent otp")
 	c.JSON(http.StatusOK, Response{Status: http.StatusOK, Description: "successfully sent otp", Data: loginResp})
 }
 
@@ -169,7 +169,7 @@ func (h *Handler) UserLoginByPhoneConfirm(c *gin.Context) {
 	}
 
 	if err := check.ValidatePhoneNumber(req.MobilePhone); err != nil {
-		handleResponseLog(c, h.log, "error validating phone number", http.StatusBadRequest, err.Error())
+		h.log.Error("error while validating phone number: " + req.MobilePhone + err.Error())
 		c.JSON(http.StatusBadRequest, Response{
 			Status:      http.StatusBadRequest,
 			Description: "error validating phone number",
@@ -201,6 +201,7 @@ func (h *Handler) UserLoginByPhoneConfirm(c *gin.Context) {
 	}
 
 	if deviceCount >= 3 {
+		h.log.Error("User has exceeded the device limit")
 		c.JSON(http.StatusBadRequest, Response{
 			Status:      http.StatusBadRequest,
 			Description: "You have exceeded the device limit. Please delete one of your devices to proceed.",
@@ -210,8 +211,8 @@ func (h *Handler) UserLoginByPhoneConfirm(c *gin.Context) {
 
 	resp, err := h.service.Auth().UserLoginByPhoneConfirm(c.Request.Context(), req)
 	if err != nil {
+		h.log.Error("error getting user in auth")
 		c.JSON(http.StatusInternalServerError, Response{Status: http.StatusInternalServerError, Description: "error while sending otp", Error: err.Error()})
-
 		if err.Error() == "OTP code not found or expired time" || err.Error() == "Incorrect OTP code" || err.Error() == "OTP data not found in Redis" {
 			c.JSON(http.StatusBadRequest, Response{Status: http.StatusBadRequest, Description: "error on otp code", Error: err})
 

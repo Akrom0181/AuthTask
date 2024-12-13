@@ -254,19 +254,20 @@ func (h *Handler) RequestOTP(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
+		h.log.Error("error binding body" + err.Error())
 		c.JSON(http.StatusBadRequest, Response{Status: http.StatusBadRequest, Description: "invalid request", Error: err})
 		return
 	}
 
 	if err := check.ValidatePhoneNumber(req.MobilePhone); err != nil {
-		handleResponseLog(c, h.log, "error while validating phone number: "+req.MobilePhone, http.StatusBadRequest, err.Error())
+		h.log.Error("error while validating phone number: " + req.MobilePhone + err.Error())
 		c.JSON(http.StatusBadRequest, Response{Status: http.StatusBadRequest, Description: "please input valid phone number", Error: err})
 		return
 	}
 
 	otpMsg, err := h.service.Auth().OTPForChangingNumber(c.Request.Context(), req, userIDStr)
 	if err != nil {
-		handleResponseLog(c, h.log, "Failed to generate OTP", http.StatusInternalServerError, err.Error())
+		h.log.Error("Failed to generate OTP" + err.Error())
 		c.JSON(http.StatusInternalServerError, Response{Status: http.StatusInternalServerError, Description: "Failed to generate OTP", Error: err})
 		return
 	}
@@ -293,7 +294,7 @@ func (h *Handler) ConfirmOTPAndUpdatePhoneNumber(c *gin.Context) {
 	var req models.UserChangePhoneConfirm
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		handleResponseLog(c, h.log, "invalid request", http.StatusBadGateway, err.Error())
+		h.log.Error("error binding json" + err.Error())
 		c.JSON(http.StatusBadRequest, Response{Status: http.StatusBadGateway, Description: "invalid request", Error: err})
 		return
 	}
@@ -305,18 +306,19 @@ func (h *Handler) ConfirmOTPAndUpdatePhoneNumber(c *gin.Context) {
 	}
 
 	if err := check.ValidatePhoneNumber(req.MobilePhone); err != nil {
-		handleResponseLog(c, h.log, "error while validating phone number: "+req.MobilePhone, http.StatusBadRequest, err.Error())
+		h.log.Error("error while validating phone number: " + req.MobilePhone + err.Error())
 		c.JSON(http.StatusBadRequest, Response{Status: http.StatusBadRequest, Description: "error validating phone number", Data: req.MobilePhone, Error: err})
 		return
 	}
 
 	err := h.service.Auth().ConfirmOTPAndUpdatePhoneNumber(c.Request.Context(), req.MobilePhone, req.SmsCode, userID.(string))
 	if err != nil {
-		handleResponseLog(c, h.log, "error while confirming phone number", http.StatusInternalServerError, err.Error())
+		h.log.Error("error while confirming phone number" + err.Error())
 		c.JSON(http.StatusInternalServerError, Response{Status: http.StatusInternalServerError, Description: "error while confirming phone number"})
 		return
 	}
 
+	h.log.Info("Phone number updated successfully" + req.MobilePhone)
 	c.JSON(http.StatusOK, Response{Status: http.StatusOK, Description: "Phone number updated successfully", Data: req.MobilePhone})
 }
 
@@ -345,17 +347,16 @@ func (h *Handler) Logout(c *gin.Context) {
 	log.Println(deviceID)
 	if !exists {
 		c.JSON(http.StatusConflict, Response{Status: http.StatusConflict, Description: "device id not found"})
-
 		return
 	}
 
 	err := h.storage.Device().Delete(c.Request.Context(), deviceID.(string), userID.(string))
 	if err != nil {
-		handleResponseLog(c, h.log, "error while logging out", http.StatusInternalServerError, err.Error())
+		h.log.Error("error while logging out" + err.Error())
 		c.JSON(http.StatusInternalServerError, Response{Status: http.StatusInternalServerError, Description: "failed to log out", Error: err})
 		return
 	}
 
-	handleResponseLog(c, h.log, "error while logging out", http.StatusInternalServerError, "")
+	h.log.Info("logged out successfully")
 	c.JSON(http.StatusOK, Response{Status: http.StatusOK, Description: "logged out successfully"})
 }

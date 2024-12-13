@@ -85,7 +85,7 @@ func (h *Handler) UpdateContact(c *gin.Context) {
 	}
 
 	if err := check.ValidatePhoneNumber(*updateRequest.PhoneNumber); err != nil {
-		handleResponseLog(c, h.log, "error validating phone number", http.StatusBadRequest, err.Error())
+		h.log.Error("error while validating phone number: " + *updateRequest.PhoneNumber + err.Error())
 		c.JSON(http.StatusBadRequest, Response{Status: http.StatusBadRequest, Description: "please input valid phone number", Data: &updateRequest.PhoneNumber, Error: err})
 		return
 	}
@@ -181,13 +181,16 @@ func (h *Handler) GetContactsById(c *gin.Context) {
 	if err != nil {
 		h.log.Error("Error: ", logger.Error(err))
 		if err.Error() == "database error: no rows in result set" {
+			h.log.Error("Error: ", logger.Error(err))
 			c.JSON(http.StatusNotFound, Response{Status: http.StatusNotFound, Description: "contact not found"})
 		} else {
+			h.log.Error("Error: ", logger.Error(err))
 			c.JSON(http.StatusInternalServerError, Response{Status: http.StatusInternalServerError, Description: err.Error()})
 		}
 		return
 	}
 
+	h.log.Info("contact retrieved successfully", logger.String("id", contactID), logger.String("user_id", userIDStr))
 	c.JSON(http.StatusOK, Response{Status: http.StatusOK, Description: "contact retrieved successfully", Data: contact})
 }
 
@@ -297,8 +300,10 @@ func (h *Handler) DeleteContact(c *gin.Context) {
 	if err != nil {
 		h.log.Error("Error: ", logger.Error(err))
 		if err.Error() == "database error: no rows in result set" {
+			h.log.Error("Error: ", logger.Error(err))
 			c.JSON(http.StatusNotFound, Response{Status: http.StatusNotFound, Description: "contact not found"})
 		} else {
+			h.log.Error("Error: ", logger.Error(err))
 			c.JSON(http.StatusInternalServerError, Response{Status: http.StatusInternalServerError, Error: err.Error()})
 		}
 		return

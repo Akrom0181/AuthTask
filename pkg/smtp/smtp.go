@@ -11,7 +11,7 @@ func SendMail(toEmail string, msg string) error {
 	// Compose the email message
 	from := "akromjonotaboyev@gmail.com"
 	to := []string{toEmail}
-	subject := "Register for Khorezm_Shashlik"
+	subject := "Register your app"
 	message := msg
 
 	// Create the email message

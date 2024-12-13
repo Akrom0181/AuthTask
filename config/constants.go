@@ -17,7 +17,7 @@ const (
 	SmtpServer          = "smtp.gmail.com"
 	SmtpPort            = "587"
 	SmtpUsername        = "akromjonotaboyev@gmail.com"
-	SmtpPassword        = "duriexakadbzalxw"
+	SmtpPassword        = "xgap tptk zutm ueep"
 )
 
 var SignedKey = []byte(os.Getenv("SECRET_KEY_JWT"))

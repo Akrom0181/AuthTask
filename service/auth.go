@@ -78,7 +78,7 @@ func (a authService) UserLoginSendOTP(ctx context.Context, loginRequest models.U
 
 	err := a.redis.SetX(ctx, loginRequest.MobilePhone, otpCode, time.Minute*2)
 	if err != nil {
-		a.log.Error("error while setting otpCode to redis user register", logger.Error(err))
+		a.log.Error("error while setting otpCode to redis user login", logger.Error(err))
 		return "", err
 	}
 
