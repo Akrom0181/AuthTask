@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS "devices" (
     app_version VARCHAR(255) NOT NULL,
     remember_me BOOLEAN DEFAULT false,
     ad_id VARCHAR(255),  
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT now(),
     FOREIGN KEY (user_id) REFERENCES "users"(id) ON DELETE CASCADE 
 );
 

@@ -15,6 +15,7 @@ import (
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+	"go.uber.org/zap"
 )
 
 // NewApi initializes and configures the API routes
@@ -25,8 +26,17 @@ import (
 // @in header
 // @name Authorization
 func NewApi(r *gin.Engine, cfg *config.Config, storage storage.IStorage, logger logger.LoggerI, service service.IServiceManager) {
-	h := handler.NewStrg(logger, storage, cfg, service)
+	// Set trusted proxies to avoid the warning about trusting all proxies
+	err := r.SetTrustedProxies([]string{
+		"13.228.225.19",  
+		"18.142.128.26",  
+		"54.254.162.138", 
+	})
+	if err != nil {
+		logger.Fatal("Failed to set trusted proxies", zap.Error(err))
+	}
 
+	h := handler.NewStrg(logger, storage, cfg, service)
 	// Apply CORS middleware globally
 	r.Use(customCORSMiddleware())
 

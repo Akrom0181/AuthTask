@@ -41,6 +41,7 @@ type IDeviceStorage interface {
 	GetDeviceCount(ctx context.Context, userId string) (int, error)
 	Delete(ctx context.Context, id string, userid string) error
 	Remove(ctx context.Context, id string) error
+	GetByIdRemove(ctx context.Context, id string) (*models.Device, error)
 }
 
 type IRedisStorage interface {

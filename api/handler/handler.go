@@ -2,7 +2,6 @@ package handler
 
 import (
 	"net/http"
-	"task/api/models"
 	"task/config"
 	"task/service"
 
@@ -39,31 +38,6 @@ func NewStrg(log logger.LoggerI, strg storage.IStorage, cfg *config.Config, serv
 		service: service,
 		cfg:     cfg,
 	}
-}
-
-func handleResponseLog(c *gin.Context, log logger.LoggerI, msg string, StatusCode int, data interface{}) {
-	resp := models.Response{}
-
-	if StatusCode >= 100 && StatusCode <= 199 {
-		resp.Description = config.ERR_INFORMATION
-	} else if StatusCode >= 200 && StatusCode <= 299 {
-		resp.Description = config.SUCCESS
-		log.Info("REQUEST SUCCEEDED", logger.Any("msg: ", msg), logger.Int("Status: ", StatusCode))
-
-	} else if StatusCode >= 300 && StatusCode <= 399 {
-		resp.Description = config.ERR_REDIRECTION
-	} else if StatusCode >= 400 && StatusCode <= 499 {
-		resp.Description = config.ERR_BADREQUEST
-		log.Error("!!!!!!!! BAD REQUEST !!!!!!!!", logger.Any("error: ", msg), logger.Int("Status: ", StatusCode))
-	} else {
-		resp.Description = config.ERR_INTERNAL_SERVER
-		log.Error("!!!!!!!! ERR_INTERNAL_SERVER !!!!!!!!", logger.Any("error: ", msg), logger.Int("Status: ", StatusCode))
-	}
-
-	resp.StatusCode = StatusCode
-	resp.Data = data
-
-	c.JSON(resp.StatusCode, resp)
 }
 
 func Welcome(c *gin.Context) {

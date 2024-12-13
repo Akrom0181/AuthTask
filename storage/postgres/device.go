@@ -157,7 +157,9 @@ func (s *DeviceRepo) Remove(ctx context.Context, deviceId string) error {
 func (s *DeviceRepo) GetByID(ctx context.Context, id, user_id string) (*models.Device, error) {
 	query := `Select id, user_id FROM "devices" WHERE id = $1 AND user_id = $2`
 
-	err := s.db.QueryRow(ctx, query, id, user_id).Scan(ctx, &id, &user_id)
+	var deviceID, deviceUserID string
+
+	err := s.db.QueryRow(ctx, query, id, user_id).Scan(&deviceID, &deviceUserID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("device not found")
@@ -168,5 +170,23 @@ func (s *DeviceRepo) GetByID(ctx context.Context, id, user_id string) (*models.D
 	return &models.Device{
 		ID:     id,
 		UserID: user_id,
+	}, nil
+}
+
+func (s *DeviceRepo) GetByIdRemove(ctx context.Context, id string) (*models.Device, error) {
+	query := `Select id FROM "devices" WHERE id = $1`
+
+	var deviceID string
+
+	err := s.db.QueryRow(ctx, query, id).Scan(&deviceID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("device not found")
+		}
+		s.log.Error("Error executing query", logger.Error(err))
+		return nil, fmt.Errorf("database error: %w", err)
+	}
+	return &models.Device{
+		ID: id,
 	}, nil
 }

@@ -25,13 +25,13 @@ func (h *Handler) SendCode(c *gin.Context) {
 	loginReq := models.UserRegisterRequest{}
 
 	if err := c.ShouldBindJSON(&loginReq); err != nil {
-		handleResponseLog(c, h.log, "error while binding body", http.StatusBadRequest, err.Error())
+		h.log.Error("error while binding body: " + err.Error())
 		c.JSON(http.StatusBadRequest, Response{Status: http.StatusBadRequest, Description: "error while binding body", Data: &loginReq, Error: err.Error()})
 		return
 	}
 
 	if err := check.ValidatePhoneNumber(loginReq.MobilePhone); err != nil {
-		handleResponseLog(c, h.log, "error while validating phone number: "+loginReq.MobilePhone, http.StatusBadRequest, err.Error())
+		h.log.Error("error while validating phone number: " + loginReq.MobilePhone)
 		c.JSON(http.StatusBadRequest, Response{Status: http.StatusBadRequest,
 			Description: "error validating phone number",
 			Data:        loginReq.MobilePhone,
@@ -41,7 +41,7 @@ func (h *Handler) SendCode(c *gin.Context) {
 
 	otp, err := h.service.Auth().UserRegister(c.Request.Context(), loginReq)
 	if err != nil {
-		handleResponseLog(c, h.log, "error while sending sms code to "+loginReq.MobilePhone, http.StatusInternalServerError, err.Error())
+		h.log.Error("error while sending sms code to " + loginReq.MobilePhone)
 		c.JSON(http.StatusInternalServerError, Response{
 			Status:      http.StatusInternalServerError,
 			Description: "error while sending otp code",
@@ -51,7 +51,7 @@ func (h *Handler) SendCode(c *gin.Context) {
 		return
 	}
 
-	handleResponseLog(c, h.log, "Otp sent successfull", http.StatusOK, otp)
+	h.log.Info("Otp sent successfull")
 	c.JSON(http.StatusOK, Response{Status: http.StatusOK, Description: "sending otp code successfully", Data: otp})
 
 }
@@ -73,13 +73,13 @@ func (h *Handler) Register(c *gin.Context) {
 
 	// Bind incoming JSON to the request struct
 	if err := c.ShouldBindJSON(&req); err != nil {
-		handleResponseLog(c, h.log, "error while binding body", http.StatusBadRequest, err.Error())
+		h.log.Error("error while binding body" + err.Error())
 		c.JSON(http.StatusBadRequest, Response{Status: http.StatusBadRequest, Description: "error while binding body", Data: &req, Error: err.Error()})
 		return
 	}
 
 	if err := check.ValidatePhoneNumber(req.MobilePhone); err != nil {
-		handleResponseLog(c, h.log, "error validating phone number", http.StatusBadRequest, err.Error())
+		h.log.Error("error while checking phone number" + err.Error())
 		c.JSON(http.StatusBadRequest, Response{Status: http.StatusBadRequest,
 			Description: "error validating phone number",
 			Data:        req.MobilePhone,
@@ -100,7 +100,7 @@ func (h *Handler) Register(c *gin.Context) {
 		return
 	}
 
-	handleResponseLog(c, h.log, "User registration confirmed successfully", http.StatusOK, confResp)
+	h.log.Info("User registration confirmed successfully")
 	c.JSON(http.StatusOK, Response{Status: http.StatusOK, Description: "User registration confirmed successfully!", Data: confResp})
 }
 
@@ -150,7 +150,7 @@ func (h *Handler) UserLogin(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        login body models.UserLoginPhoneConfirmRequest true "login"
-// @Success      200  {object}  models.UserLoginResponse
+// @Success      200  {object}  models.Response
 // @Failure      400  {object}  models.Response
 // @Failure      401  {object}  models.Response
 // @Failure      500  {object}  models.Response
@@ -183,7 +183,8 @@ func (h *Handler) UserLoginByPhoneConfirm(c *gin.Context) {
 		h.log.Error("error fetching user by phone number: " + err.Error())
 		c.JSON(http.StatusUnauthorized, Response{
 			Status:      http.StatusUnauthorized,
-			Description: "User not found or phone number not registered",
+			Description: "user not found",
+			Data:        "please register your account",
 			Error:       err.Error(),
 		})
 		return
@@ -221,7 +222,7 @@ func (h *Handler) UserLoginByPhoneConfirm(c *gin.Context) {
 		h.log.Error("error in UserLoginByPhoneConfirm: " + err.Error())
 		c.JSON(http.StatusInternalServerError, Response{
 			Status:      http.StatusInternalServerError,
-			Description: "error in user loggin by phoneconfirm",
+			Description: "error in user login by phone",
 			Error:       err.Error(),
 		})
 		return

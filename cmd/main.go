@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"net/http"
 	"os"
 
 	// "task/api"
@@ -14,7 +14,6 @@ import (
 	"task/storage/redis"
 
 	"github.com/gin-gonic/gin"
-	"go.uber.org/zap"
 )
 
 // func KeepAlive(cfg *config.Config) {
@@ -34,7 +33,7 @@ func main() {
 
 	var loggerLevel = new(string)
 
-	*loggerLevel = logger.LevelDebug
+	*loggerLevel = logger.LevelInfo
 
 	switch cfg.Environment {
 	case config.DebugMode:
@@ -68,28 +67,20 @@ func main() {
 	r := gin.New()
 	r.Use(gin.Recovery(), gin.Logger())
 
-	// Set trusted proxies
-	err = r.SetTrustedProxies([]string{
-		"13.228.225.19",
-		"18.142.128.26",
-		"54.254.162.138",
-	})
-	if err != nil {
-		log.Fatal("Failed to set trusted proxies: ", zap.Error(err))
-	}
-
 	api.NewApi(r, &cfg, pgconn, log, services)
 
-	// Log the server start
-	fmt.Println("Listening server on", os.Getenv("POSTGRES_HOST")+os.Getenv("HTTP_PORT"))
+	// go KeepAlive(&cfg)
+
+	r.GET("/ping", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "pong",
+		})
+	})
+
+	// fmt.Println("Listening server", os.Getenv("POSTGRES_HOST")+os.Getenv("HTTP_PORT"))
 	err = r.Run(os.Getenv("HTTP_PORT"))
 	if err != nil {
 		panic(err)
 	}
+
 }
-
-// go KeepAlive(&cfg)
-
-// r.GET("/ping", func(c *gin.Context) {
-// 	c.String(200, "pong")
-// })

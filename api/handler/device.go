@@ -191,6 +191,17 @@ func (h *Handler) RemoveDevice(c *gin.Context) {
 		return
 	}
 
+	_, err = h.storage.Device().GetByIdRemove(c.Request.Context(), id)
+	if err != nil {
+		h.log.Error(err.Error() + ":" + "error while getting device by id")
+		if err.Error() == "database error: no rows in result set" {
+			c.JSON(http.StatusNotFound, Response{Status: http.StatusNotFound, Description: "device not found"})
+		} else {
+			c.JSON(http.StatusInternalServerError, Response{Status: http.StatusInternalServerError, Description: err.Error()})
+		}
+		return
+	}
+
 	err = h.storage.Device().Remove(c.Request.Context(), id)
 	if err != nil {
 		h.log.Error(err.Error() + ":" + "error while deleting device")
