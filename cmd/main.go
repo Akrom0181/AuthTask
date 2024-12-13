@@ -14,6 +14,7 @@ import (
 	"task/storage/redis"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 // func KeepAlive(cfg *config.Config) {
@@ -67,18 +68,28 @@ func main() {
 	r := gin.New()
 	r.Use(gin.Recovery(), gin.Logger())
 
+	// Set trusted proxies
+	err = r.SetTrustedProxies([]string{
+		"13.228.225.19",
+		"18.142.128.26",
+		"54.254.162.138",
+	})
+	if err != nil {
+		log.Fatal("Failed to set trusted proxies: ", zap.Error(err))
+	}
+
 	api.NewApi(r, &cfg, pgconn, log, services)
 
-	// go KeepAlive(&cfg)
-
-	// r.GET("/ping", func(c *gin.Context) {
-	// 	c.String(200, "pong")
-	// })
-
-	fmt.Println("Listening server", os.Getenv("POSTGRES_HOST")+os.Getenv("HTTP_PORT"))
+	// Log the server start
+	fmt.Println("Listening server on", os.Getenv("POSTGRES_HOST")+os.Getenv("HTTP_PORT"))
 	err = r.Run(os.Getenv("HTTP_PORT"))
 	if err != nil {
 		panic(err)
 	}
-
 }
+
+// go KeepAlive(&cfg)
+
+// r.GET("/ping", func(c *gin.Context) {
+// 	c.String(200, "pong")
+// })
