@@ -161,8 +161,9 @@ func (c *ContactRepo) GetById(ctx context.Context, id string, userid string) (*m
 			c.log.Warn("Contact not found", logger.String("contactID", id), logger.String("userID", userid))
 			return nil, fmt.Errorf("contact not found")
 		}
-		c.log.Error("Error executing query", logger.Error(err))
-		return nil, fmt.Errorf("database error: %w", err)
+		
+		c.log.Error("Database error", logger.Error(err))
+		return nil, fmt.Errorf("internal server error")
 	}
 
 	if created_at.Valid {

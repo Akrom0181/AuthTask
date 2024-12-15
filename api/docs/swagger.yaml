@@ -1,13 +1,4 @@
 definitions:
-  handler.Response:
-    properties:
-      Status:
-        type: integer
-      data: {}
-      description:
-        type: string
-      error: {}
-    type: object
   models.Contact:
     properties:
       created_at:
@@ -67,11 +58,12 @@ definitions:
     type: object
   models.Response:
     properties:
-      Status_code:
-        type: integer
       data: {}
       description:
         type: string
+      error: {}
+      status_code:
+        type: integer
     type: object
   models.UpdateContact:
     properties:
@@ -107,6 +99,8 @@ definitions:
     properties:
       device_info:
         $ref: '#/definitions/models.CreateDevice'
+      identifier:
+        type: string
       otp:
         type: string
       phone_number:
@@ -117,17 +111,12 @@ definitions:
       phone_number:
         type: string
     type: object
-  models.UserLoginResponse:
-    properties:
-      access_token:
-        type: string
-      refresh_token:
-        type: string
-    type: object
   models.UserRegisterConfRequest:
     properties:
       device_info:
         $ref: '#/definitions/models.CreateDevice'
+      identifier:
+        type: string
       otp:
         type: string
       phone_number:
@@ -166,7 +155,7 @@ paths:
           description: Successfully created contact
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -175,7 +164,7 @@ paths:
           description: Bad Request
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -184,7 +173,7 @@ paths:
           description: Unauthorized
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -193,7 +182,7 @@ paths:
           description: Server error
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -222,7 +211,7 @@ paths:
           description: Successfully deleted
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -231,7 +220,7 @@ paths:
           description: Bad Request
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -240,7 +229,7 @@ paths:
           description: Unauthorized
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -249,7 +238,7 @@ paths:
           description: Not Found
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -258,7 +247,7 @@ paths:
           description: Server error
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -294,7 +283,7 @@ paths:
           description: Successfully retrieved contacts
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -303,7 +292,7 @@ paths:
           description: Bad Request
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -312,7 +301,7 @@ paths:
           description: Unauthorized
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -321,7 +310,7 @@ paths:
           description: Server error
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -350,7 +339,7 @@ paths:
           description: Successfully retrieved contact
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -359,7 +348,7 @@ paths:
           description: Bad Request
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -368,7 +357,7 @@ paths:
           description: Unauthorized
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -377,7 +366,7 @@ paths:
           description: Contact not found
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -386,7 +375,7 @@ paths:
           description: Server error
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -421,7 +410,7 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   $ref: '#/definitions/models.Contact'
@@ -430,7 +419,7 @@ paths:
           description: Bad Request
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -439,7 +428,7 @@ paths:
           description: Unauthorized
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -448,7 +437,7 @@ paths:
           description: Contact not found
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -457,7 +446,7 @@ paths:
           description: Server error
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -486,7 +475,7 @@ paths:
           description: Success Request
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -495,7 +484,7 @@ paths:
           description: Bad Request
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -504,7 +493,7 @@ paths:
           description: Unauthorized
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -513,7 +502,7 @@ paths:
           description: Device not found
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -522,7 +511,7 @@ paths:
           description: Server error
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -545,7 +534,7 @@ paths:
           description: Successfully retrieved devices
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -554,7 +543,7 @@ paths:
           description: Bad Request
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -563,7 +552,7 @@ paths:
           description: Unauthorized
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -572,7 +561,7 @@ paths:
           description: Device not found
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -581,7 +570,7 @@ paths:
           description: Server error
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -610,7 +599,7 @@ paths:
           description: Success Request
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -619,7 +608,7 @@ paths:
           description: Bad Request
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -628,7 +617,7 @@ paths:
           description: Unauthorized
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -637,7 +626,7 @@ paths:
           description: Server error
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -665,7 +654,7 @@ paths:
           description: Success Request
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -674,7 +663,7 @@ paths:
           description: Bad Request
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -683,7 +672,7 @@ paths:
           description: Unauthorized
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -692,7 +681,7 @@ paths:
           description: User not found
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -701,7 +690,7 @@ paths:
           description: Server error
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -724,7 +713,7 @@ paths:
           description: Success Request
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -733,7 +722,7 @@ paths:
           description: Bad Request
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -742,7 +731,7 @@ paths:
           description: Unauthorized
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -751,7 +740,7 @@ paths:
           description: Contact not found
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -760,7 +749,7 @@ paths:
           description: Server error
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -796,7 +785,7 @@ paths:
           description: Success
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -805,7 +794,7 @@ paths:
           description: Bad Request
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -814,7 +803,7 @@ paths:
           description: Unauthorized
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -823,7 +812,7 @@ paths:
           description: Contact not found
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -832,7 +821,7 @@ paths:
           description: Server error
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -859,7 +848,7 @@ paths:
           description: Success
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -868,7 +857,7 @@ paths:
           description: Bad Request
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -877,7 +866,7 @@ paths:
           description: User not found
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -886,7 +875,7 @@ paths:
           description: Server error
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -912,7 +901,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/models.UserLoginResponse'
+            $ref: '#/definitions/models.Response'
         "400":
           description: Bad Request
           schema:
@@ -951,6 +940,10 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/models.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.Response'
         "404":
           description: Not Found
           schema:
@@ -959,7 +952,7 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/models.Response'
-      summary: User login requst
+      summary: User login request
       tags:
       - auth
   /task/api/v1/user/logout:
@@ -975,7 +968,7 @@ paths:
           description: Success Request
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -984,7 +977,7 @@ paths:
           description: Bad Request
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -993,7 +986,7 @@ paths:
           description: Unauthorized
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -1002,7 +995,7 @@ paths:
           description: Conflict
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -1011,7 +1004,7 @@ paths:
           description: Server error
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -1039,7 +1032,7 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/models.UserLoginResponse'
+            $ref: '#/definitions/models.Response'
         "400":
           description: Bad Request
           schema:
@@ -1109,7 +1102,7 @@ paths:
           description: Success Request
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -1118,7 +1111,7 @@ paths:
           description: Bad Request
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -1127,7 +1120,7 @@ paths:
           description: Unauthorized
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -1136,7 +1129,7 @@ paths:
           description: User not found
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -1145,7 +1138,7 @@ paths:
           description: Server error
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -1175,7 +1168,7 @@ paths:
           description: Success
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -1184,7 +1177,7 @@ paths:
           description: Bad Request
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string
@@ -1193,7 +1186,7 @@ paths:
           description: Server error
           schema:
             allOf:
-            - $ref: '#/definitions/handler.Response'
+            - $ref: '#/definitions/models.Response'
             - properties:
                 data:
                   type: string

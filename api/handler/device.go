@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"task/api/models"
 	"task/pkg/logger"
 
 	"github.com/gin-gonic/gin"
@@ -17,9 +18,9 @@ import (
 // // @Accept       json
 // // @Produce      json
 // // @Param        Device body models.CreateDevice true "Device"
-// // @Success      200 {object} Response{data=string} "Successfully created device"
-// // @Response     400 {object} Response{data=string} "Bad Request"
-// // @Failure      500 {object} Response{data=string} "Server error"
+// // @Success      200 {object} models.Response{data=string} "Successfully created device"
+// // @Response     400 {object} models.Response{data=string} "Bad Request"
+// // @Failure      500 {object} models.Response{data=string} "Server error"
 // func (h *Handler) CreateDevice(c *gin.Context) {
 // 	var device models.Device
 
@@ -45,7 +46,7 @@ import (
 // 	}
 
 // 	h.log.Info("Device created successfully!")
-// 	c.JSON(http.StatusCreated, Response{Data: resp})
+// 	c.JSON(http.StatusCreated, models.Response{Data: resp})
 // }
 
 // @Security BearerAuth
@@ -56,22 +57,22 @@ import (
 // @Tags 			device
 // @Accept 			json
 // @Produce 		json
-// @Success 		200 {object} Response{data=string} "Successfully retrieved devices"
-// @Response        400 {object} Response{data=string} "Bad Request"
-// @Response        401 {object} Response{data=string} "Unauthorized"
-// @Failure         404 {object} Response{data=string} "Device not found"
-// @Failure         500 {object} Response{data=string} "Server error"
+// @Success 		200 {object} models.Response{data=string} "Successfully retrieved devices"
+// @Response        400 {object} models.Response{data=string} "Bad Request"
+// @Response        401 {object} models.Response{data=string} "Unauthorized"
+// @Failure         404 {object} models.Response{data=string} "Device not found"
+// @Failure         500 {object} models.Response{data=string} "Server error"
 func (h *Handler) GetAllDevices(c *gin.Context) {
 
 	userID, exists := c.Get("user_id")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, Response{Status: http.StatusUnauthorized, Description: "unauthorized"})
+		c.JSON(http.StatusUnauthorized, models.Response{StatusCode: http.StatusUnauthorized, Description: "unauthorized"})
 		return
 	}
 
 	userIDStr, ok := userID.(string)
 	if !ok || userIDStr == "" {
-		c.JSON(http.StatusUnauthorized, Response{Status: http.StatusUnauthorized, Description: "unauthorized"})
+		c.JSON(http.StatusUnauthorized, models.Response{StatusCode: http.StatusUnauthorized, Description: "unauthorized"})
 		return
 	}
 
@@ -79,15 +80,15 @@ func (h *Handler) GetAllDevices(c *gin.Context) {
 	if err != nil {
 		h.log.Error("Error: ", logger.Error(err))
 		if err.Error() == "database error: no rows in result set" {
-			c.JSON(http.StatusNotFound, Response{Status: http.StatusNotFound, Description: "devices not found"})
+			c.JSON(http.StatusNotFound, models.Response{StatusCode: http.StatusNotFound, Description: "devices not found"})
 		} else {
-			c.JSON(http.StatusInternalServerError, Response{Status: http.StatusInternalServerError, Description: err.Error()})
+			c.JSON(http.StatusInternalServerError, models.Response{StatusCode: http.StatusInternalServerError, Description: err.Error()})
 		}
 		return
 	}
 
 	h.log.Info("Devices retrieved successfully")
-	c.JSON(http.StatusOK, Response{Status: http.StatusOK, Data: devices, Description: "devices retrieved successfully"})
+	c.JSON(http.StatusOK, models.Response{StatusCode: http.StatusOK, Data: devices, Description: "devices retrieved successfully"})
 }
 
 // @Security BearerAuth
@@ -99,29 +100,29 @@ func (h *Handler) GetAllDevices(c *gin.Context) {
 // @Accept		json
 // @Produce		json
 // @Param		id path string true "Device ID"
-// @Success     200 {object} Response{data=string} "Success Request"
-// @Response    400 {object} Response{data=string} "Bad Request"
-// @Response    401 {object} Response{data=string} "Unauthorized"
-// @Failure     404 {object} Response{data=string} "Device not found"
-// @Failure     500 {object} Response{data=string} "Server error"
+// @Success     200 {object} models.Response{data=string} "Success Request"
+// @Response    400 {object} models.Response{data=string} "Bad Request"
+// @Response    401 {object} models.Response{data=string} "Unauthorized"
+// @Failure     404 {object} models.Response{data=string} "Device not found"
+// @Failure     500 {object} models.Response{data=string} "Server error"
 func (h *Handler) DeleteDevice(c *gin.Context) {
 	id := c.Param("id")
 
 	userID, exists := c.Get("user_id")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, Response{Status: http.StatusUnauthorized, Description: "unauthorized"})
+		c.JSON(http.StatusUnauthorized, models.Response{StatusCode: http.StatusUnauthorized, Description: "unauthorized"})
 		return
 	}
 
 	userIDStr, ok := userID.(string)
 	if !ok || userIDStr == "" {
-		c.JSON(http.StatusUnauthorized, Response{Status: http.StatusUnauthorized, Description: "unauthorized"})
+		c.JSON(http.StatusUnauthorized, models.Response{StatusCode: http.StatusUnauthorized, Description: "unauthorized"})
 		return
 	}
 
 	if id == "" {
 		h.log.Error("missing device id")
-		c.JSON(http.StatusBadRequest, Response{Status: http.StatusBadRequest, Description: "you must fill the user id"})
+		c.JSON(http.StatusBadRequest, models.Response{StatusCode: http.StatusBadRequest, Description: "you must fill the user id"})
 		return
 	}
 
@@ -136,9 +137,9 @@ func (h *Handler) DeleteDevice(c *gin.Context) {
 	if err != nil {
 		h.log.Error(err.Error() + ":" + "error while getting device by id")
 		if err.Error() == "database error: no rows in result set" {
-			c.JSON(http.StatusNotFound, Response{Status: http.StatusNotFound, Description: "device not found"})
+			c.JSON(http.StatusNotFound, models.Response{StatusCode: http.StatusNotFound, Description: "device not found"})
 		} else {
-			c.JSON(http.StatusInternalServerError, Response{Status: http.StatusInternalServerError, Description: err.Error()})
+			c.JSON(http.StatusInternalServerError, models.Response{StatusCode: http.StatusInternalServerError, Description: err.Error()})
 		}
 		return
 	}
@@ -146,8 +147,8 @@ func (h *Handler) DeleteDevice(c *gin.Context) {
 	err = h.storage.Device().Delete(c.Request.Context(), id, userIDStr)
 	if err != nil {
 		h.log.Error(err.Error() + ":" + "error while deleting device")
-		c.JSON(http.StatusBadRequest, Response{
-			Status:      http.StatusBadRequest,
+		c.JSON(http.StatusBadRequest, models.Response{
+			StatusCode:  http.StatusBadRequest,
 			Description: "please input valid data",
 			Data:        err.Error() + ":" + "error while deleting device",
 		})
@@ -155,9 +156,9 @@ func (h *Handler) DeleteDevice(c *gin.Context) {
 	}
 
 	h.log.Info("Device deleted successfully!")
-	c.JSON(http.StatusOK, Response{
+	c.JSON(http.StatusOK, models.Response{
 		Data:        id,
-		Status:      http.StatusOK,
+		StatusCode:  http.StatusOK,
 		Description: "Device deleted successfully!",
 	},
 	)
@@ -171,23 +172,23 @@ func (h *Handler) DeleteDevice(c *gin.Context) {
 // @Accept		json
 // @Produce		json
 // @Param		id path string true "Device ID"
-// @Success     200 {object} Response{data=string} "Success Request"
-// @Response    400 {object} Response{data=string} "Bad Request"
-// @Response    401 {object} Response{data=string} "Unauthorized"
-// @Failure     500 {object} Response{data=string} "Server error"
+// @Success     200 {object} models.Response{data=string} "Success Request"
+// @Response    400 {object} models.Response{data=string} "Bad Request"
+// @Response    401 {object} models.Response{data=string} "Unauthorized"
+// @Failure     500 {object} models.Response{data=string} "Server error"
 func (h *Handler) RemoveDevice(c *gin.Context) {
 	id := c.Param("id")
 
 	if id == "" {
 		h.log.Error("missing device id")
-		c.JSON(http.StatusBadRequest, Response{Status: http.StatusBadRequest, Description: "you must fill the user id"})
+		c.JSON(http.StatusBadRequest, models.Response{StatusCode: http.StatusBadRequest, Description: "you must fill the user id"})
 		return
 	}
 
 	err := uuid.Validate(id)
 	if err != nil {
 		h.log.Error(err.Error() + ":" + "error while validating id")
-		c.JSON(http.StatusBadRequest, Response{Status: http.StatusBadRequest, Description: "please enter a valid id", Error: err})
+		c.JSON(http.StatusBadRequest, models.Response{StatusCode: http.StatusBadRequest, Description: "please enter a valid id", Error: err})
 		return
 	}
 
@@ -195,9 +196,9 @@ func (h *Handler) RemoveDevice(c *gin.Context) {
 	if err != nil {
 		h.log.Error(err.Error() + ":" + "error while getting device by id")
 		if err.Error() == "database error: no rows in result set" {
-			c.JSON(http.StatusNotFound, Response{Status: http.StatusNotFound, Description: "device not found"})
+			c.JSON(http.StatusNotFound, models.Response{StatusCode: http.StatusNotFound, Description: "device not found"})
 		} else {
-			c.JSON(http.StatusInternalServerError, Response{Status: http.StatusInternalServerError, Description: err.Error()})
+			c.JSON(http.StatusInternalServerError, models.Response{StatusCode: http.StatusInternalServerError, Description: err.Error()})
 		}
 		return
 	}
@@ -205,10 +206,10 @@ func (h *Handler) RemoveDevice(c *gin.Context) {
 	err = h.storage.Device().Remove(c.Request.Context(), id)
 	if err != nil {
 		h.log.Error(err.Error() + ":" + "error while deleting device")
-		c.JSON(http.StatusBadRequest, Response{Data: err, Status: http.StatusBadRequest, Description: "error while deleting device"})
+		c.JSON(http.StatusBadRequest, models.Response{Data: err, StatusCode: http.StatusBadRequest, Description: "error while deleting device"})
 		return
 	}
 
 	h.log.Info("Device deleted successfully!")
-	c.JSON(http.StatusOK, Response{Status: http.StatusOK, Description: "Device deleted successfully!", Data: id})
+	c.JSON(http.StatusOK, models.Response{StatusCode: http.StatusOK, Description: "Device deleted successfully!", Data: id})
 }

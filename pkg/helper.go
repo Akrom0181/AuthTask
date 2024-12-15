@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"database/sql"
+	"encoding/base64"
 	"math/rand"
 	"strconv"
 )
@@ -24,4 +25,13 @@ func GetSerialId(n int) string {
 func GenerateOTP() int {
 
 	return rand.Intn(900000) + 100000
+}
+
+func GenerateIdentifier() string {
+	b := make([]byte, 8) // 8 bytes = 11 characters base64
+	_, err := rand.Read(b)
+	if err != nil {
+		panic(err) 
+	}
+	return base64.RawURLEncoding.EncodeToString(b)
 }

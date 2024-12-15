@@ -20,13 +20,6 @@ type Handler struct {
 	cfg     *config.Config
 }
 
-type Response struct {
-	Status      int         `json:"Status"`
-	Description string      `json:"description"`
-	Data        interface{} `json:"data"`
-	Error       interface{} `json:"error"`
-}
-
 type ErrorResponse struct {
 	Error interface{} `json:"error"`
 }

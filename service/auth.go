@@ -69,43 +69,26 @@ func (a authService) ConfirmOTPAndUpdatePhoneNumber(ctx context.Context, phoneNu
 	return nil
 }
 
-func (a authService) UserLoginSendOTP(ctx context.Context, loginRequest models.UserLoginRequest) (string, error) {
-	fmt.Println(" loginRequest.Login: ", loginRequest.MobilePhone)
-
-	otpCode := pkg.GenerateOTP()
-
-	msg := fmt.Sprintf("login uchun tasdiqlash kodi: %v", otpCode)
-
-	err := a.redis.SetX(ctx, loginRequest.MobilePhone, otpCode, time.Minute*2)
-	if err != nil {
-		a.log.Error("error while setting otpCode to redis user login", logger.Error(err))
-		return "", err
-	}
-
-	// err = pkg.SendSms(loginRequest.MobilePhone, msg)
-	// if err != nil {
-	// 	a.log.Error("error while sending otp code to user register", logger.Error(err))
-	// 	return err
-	// }
-
-	return msg, nil
-}
-
 func (a authService) UserRegister(ctx context.Context, loginRequest models.UserRegisterRequest) (string, error) {
 	fmt.Println("loginRequest.MobilePhone: ", loginRequest.MobilePhone)
 
+	// Generate OTP
 	otpCode := pkg.GenerateOTP()
 	otpStr := fmt.Sprintf("%d", otpCode)
 
-	msg := fmt.Sprintf("ro‘yxatdan o‘tish uchun tasdiqlash kodi: %v", otpCode)
+	identifier := pkg.GenerateIdentifier()
+
+	msg := fmt.Sprintf("Ro‘yxatdan o‘tish uchun tasdiqlash kodi: %v  Identifikator: %v", otpCode, identifier)
 
 	tempUser := struct {
 		OTP         string `json:"otp"`
+		Identifier  string `json:"identifier"`
 		FirstName   string `json:"first_name"`
 		LastName    string `json:"last_name"`
 		PhoneNumber string `json:"phone_number"`
 	}{
 		OTP:         otpStr,
+		Identifier:  identifier,
 		FirstName:   loginRequest.User.FirstName,
 		LastName:    loginRequest.User.LastName,
 		PhoneNumber: loginRequest.MobilePhone,
@@ -117,11 +100,16 @@ func (a authService) UserRegister(ctx context.Context, loginRequest models.UserR
 		return "", err
 	}
 
-	err = a.redis.SetX(ctx, loginRequest.MobilePhone, tempUserData, time.Minute*2)
+	err = a.redis.SetX(ctx, loginRequest.MobilePhone, tempUserData, time.Minute*3)
 	if err != nil {
 		a.log.Error("error while setting temp user data to redis", logger.Error(err))
 		return "", err
 	}
+
+	a.log.Info("User registration initiated",
+		logger.String("phone_number", loginRequest.MobilePhone),
+		logger.String("identifier", identifier),
+	)
 
 	return msg, nil
 }
@@ -132,36 +120,46 @@ func (a authService) UserRegisterConfirm(ctx context.Context, req models.UserReg
 	otpData, err := a.redis.Get(ctx, req.MobilePhone)
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
-			a.log.Error("otp not found in Redis", logger.String("mobile_phone", req.MobilePhone))
-			return resp, fmt.Errorf("otp not found for phone number %s", req.MobilePhone)
+			a.log.Error("OTP not found or expired in Redis", logger.String("mobile_phone", req.MobilePhone))
+			return resp, fmt.Errorf(config.ErrOtpExpired)
 		}
-		a.log.Error("error while getting otp code for user register confirm", logger.Error(err))
+		a.log.Error("Error while getting OTP data from Redis", logger.Error(err))
 		return resp, fmt.Errorf("error retrieving OTP data: %v", err)
 	}
 
 	otpDataStr, ok := otpData.(string)
 	if !ok {
-		a.log.Error("invalid OTP data format", logger.String("type", fmt.Sprintf("%T", otpData)))
-		return resp, fmt.Errorf("invalid OTP data format")
+		a.log.Error("Invalid OTP data format", logger.String("type", fmt.Sprintf("%T", otpData)))
+		return resp, fmt.Errorf(config.ErrOtpInvalidFormat)
 	}
 
 	var tempUser struct {
 		OTP         string `json:"otp"`
+		Identifier  string `json:"identifier"`
 		FirstName   string `json:"first_name"`
 		LastName    string `json:"last_name"`
 		PhoneNumber string `json:"phone_number"`
 	}
+
 	err = json.Unmarshal([]byte(otpDataStr), &tempUser)
 	if err != nil {
-		a.log.Error("error while unmarshalling otp data", logger.Error(err))
+		a.log.Error("Error unmarshalling OTP data", logger.Error(err))
 		return resp, fmt.Errorf("failed to parse OTP data")
 	}
 
+	// Validate OTP
 	if req.Otp != tempUser.OTP {
-		a.log.Error("incorrect otp code for user register confirm", logger.String("mobile_phone", req.MobilePhone))
-		return resp, fmt.Errorf("incorrect otp code")
+		a.log.Error("Incorrect OTP code", logger.String("mobile_phone", req.MobilePhone))
+		return resp, fmt.Errorf(config.ErrOtpMismatch)
 	}
 
+	// Validate Identifier (if used)
+	if req.Identifier != tempUser.Identifier {
+		a.log.Error("Identifier mismatch", logger.String("mobile_phone", req.MobilePhone))
+		return resp, fmt.Errorf("identifier mismatch")
+	}
+
+	// Create User
 	user := models.User{
 		FirstName:   tempUser.FirstName,
 		LastName:    tempUser.LastName,
@@ -170,10 +168,11 @@ func (a authService) UserRegisterConfirm(ctx context.Context, req models.UserReg
 
 	id, err := a.storage.User().Create(ctx, &user)
 	if err != nil {
-		a.log.Error("error while creating user", logger.Error(err))
-		return resp, fmt.Errorf("failed to create user: %v", err)
+		a.log.Error(config.ErrUserCreation, logger.Error(err), logger.String("mobile_phone", req.MobilePhone))
+		return resp, fmt.Errorf(config.ErrUserCreation)
 	}
 
+	// Insert Device
 	device := models.Device{
 		UserID:          id.ID,
 		Name:            req.DeviceInfo.Name,
@@ -187,31 +186,68 @@ func (a authService) UserRegisterConfirm(ctx context.Context, req models.UserReg
 
 	deviceID, err := a.storage.Device().Insert(ctx, &device)
 	if err != nil {
-		a.log.Error("error while inserting device", logger.Error(err))
-
+		a.log.Error(config.ErrDeviceInsertion, logger.Error(err))
 		rollbackErr := a.storage.User().Delete(ctx, id.ID)
 		if rollbackErr != nil {
-			a.log.Error("error while rolling back user creation", logger.Error(rollbackErr))
+			a.log.Error("Error rolling back user creation", logger.Error(rollbackErr), logger.String("user_id", id.ID))
 		}
-
-		return resp, fmt.Errorf("failed to insert device: %v", err)
+		return resp, fmt.Errorf(config.ErrDeviceInsertion)
 	}
 
-	m := make(map[string]interface{})
-	m["user_id"] = id.ID
-	m["user_role"] = config.USER_ROLE
-	m["device_id"] = deviceID.ID
+	// Generate Tokens
+	m := map[string]interface{}{
+		"user_id":   id.ID,
+		"user_role": config.USER_ROLE,
+		"device_id": deviceID.ID,
+	}
 
 	accessToken, refreshToken, err := jwt.GenJWT(m)
 	if err != nil {
-		a.log.Error("error while generating tokens for user register confirm", logger.Error(err))
-		return resp, fmt.Errorf("failed to generate tokens: %v", err)
+		a.log.Error(config.ErrTokenGeneration, logger.Error(err))
+		return resp, fmt.Errorf(config.ErrTokenGeneration)
 	}
 
 	resp.AccessToken = accessToken
 	resp.RefreshToken = refreshToken
 
 	return resp, nil
+}
+
+func (a authService) UserLoginSendOTP(ctx context.Context, loginRequest models.UserLoginRequest) (string, error) {
+	fmt.Println(" loginRequest.Login: ", loginRequest.MobilePhone)
+
+	otpCode := pkg.GenerateOTP()
+	identifier := pkg.GenerateIdentifier()
+
+	msg := fmt.Sprintf("login uchun tasdiqlash kodi: %v  Identifikator: %v", otpCode, identifier)
+
+	tempUser := struct {
+		OTP        int    `json:"otp"`
+		Identifier string `json:"identifier"`
+	}{
+		OTP:        otpCode,
+		Identifier: identifier,
+	}
+
+	tempUserData, err := json.Marshal(tempUser)
+	if err != nil {
+		a.log.Error("error while marshalling temp user data", logger.Error(err))
+		return "", err
+	}
+
+	err = a.redis.SetX(ctx, loginRequest.MobilePhone, tempUserData, time.Minute*3)
+	if err != nil {
+		a.log.Error("error while setting otpCode to redis user login", logger.Error(err))
+		return "", err
+	}
+
+	// err = pkg.SendSms(loginRequest.MobilePhone, msg)
+	// if err != nil {
+	// 	a.log.Error("error while sending otp code to user register", logger.Error(err))
+	// 	return err
+	// }
+
+	return msg, nil
 }
 
 func (a authService) UserLoginByPhoneConfirm(ctx context.Context, req models.UserLoginPhoneConfirmRequest) (models.UserLoginResponse, error) {
@@ -227,9 +263,34 @@ func (a authService) UserLoginByPhoneConfirm(ctx context.Context, req models.Use
 		return resp, errors.New("tizim xatosi yuz berdi")
 	}
 
-	if req.SmsCode != storedOTP {
+	otpDataStr, ok := storedOTP.(string)
+	if !ok {
+		a.log.Error("Invalid OTP data format", logger.String("type", fmt.Sprintf("%T", otpDataStr)))
+		return resp, fmt.Errorf(config.ErrOtpInvalidFormat)
+	}
+
+	var tempUser struct {
+		OTP         string `json:"otp"`
+		Identifier  string `json:"identifier"`
+		FirstName   string `json:"first_name"`
+		LastName    string `json:"last_name"`
+		PhoneNumber string `json:"phone_number"`
+	}
+
+	err = json.Unmarshal([]byte(otpDataStr), &tempUser)
+	if err != nil {
+		a.log.Error("Error unmarshalling OTP data", logger.Error(err))
+		return resp, fmt.Errorf("failed to parse OTP data")
+	}
+
+	if req.SmsCode != tempUser.OTP {
 		a.log.Error("incorrect OTP code", logger.Error(errors.New("OTP code mismatch")))
 		return resp, errors.New("noto'g'ri OTP kod")
+	}
+
+	if req.Identifier != tempUser.Identifier {
+		a.log.Error("identifier mismatch", logger.Error(errors.New("identifier mismatch")))
+		return resp, errors.New("noto'g'ri identifikator")
 	}
 
 	err = a.redis.Del(ctx, req.MobilePhone)

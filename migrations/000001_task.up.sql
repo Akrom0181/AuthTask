@@ -10,11 +10,11 @@ CREATE TABLE IF NOT EXISTS "users" (
 Create TABLE IF NOT EXISTS "contacts" (
     id UUID PRIMARY KEY,
     user_id UUID REFERENCES "users"(id), 
-    first_name VARCHAR(55) not null,
-    last_name VARCHAR(55) not null,
-    middle_name VARCHAR(55) not null,
-    phone_number VARCHAR(55) UNIQUE not null,
-    created_at TIMESTAMP Default now(),
+    first_name VARCHAR(55) NOT NULL,
+    last_name VARCHAR(55) NOT NULL,
+    middle_name VARCHAR(55) NOT NULL,
+    phone_number VARCHAR(55) UNIQUE NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP
 );
 
@@ -30,10 +30,9 @@ CREATE TABLE IF NOT EXISTS "devices" (
     app_version VARCHAR(255) NOT NULL,
     remember_me BOOLEAN DEFAULT false,
     ad_id VARCHAR(255),  
-    created_at TIMESTAMP DEFAULT now(),
+    created_at TIMESTAMP DEFAULT NOW(),
     FOREIGN KEY (user_id) REFERENCES "users"(id) ON DELETE CASCADE 
 );
-
 
 CREATE INDEX idx_user_id ON devices(user_id);
 CREATE INDEX idx_type ON devices(type); 

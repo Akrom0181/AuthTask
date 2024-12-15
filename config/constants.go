@@ -18,6 +18,12 @@ const (
 	SmtpPort            = "587"
 	SmtpUsername        = "akromjonotaboyev@gmail.com"
 	SmtpPassword        = "xgap tptk zutm ueep"
+	ErrOtpExpired       = "otp has expired. Please request a new one"
+	ErrOtpMismatch      = "incorrect OTP. Please try again"
+	ErrOtpInvalidFormat = "invalid OTP data format"
+	ErrUserCreation     = "failed to create user"
+	ErrDeviceInsertion  = "failed to insert device"
+	ErrTokenGeneration  = "failed to generate tokens"
 )
 
 var SignedKey = []byte(os.Getenv("SECRET_KEY_JWT"))

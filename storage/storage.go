@@ -24,6 +24,8 @@ type IUserStorage interface {
 	CheckPhoneNumberExist(ctx context.Context, id string) (models.User, error)
 	GetByPhone(ctx context.Context, number string) (*models.User, error)
 	UpdatePhoneNumber(ctx context.Context, userid string, number string) (string, error)
+	UserExists(ctx context.Context, phoneNumber string) (bool, error)
+	ValidateOTP(ctx context.Context, phoneNumber, inputOtp, inputIdentifier string) error
 }
 
 type IContactStorage interface {

@@ -311,7 +311,7 @@ func (u *UserRepo) GetByPhone(ctx context.Context, number string) (*models.User,
 		created_at sql.NullString
 		updated_at sql.NullString
 	)
-	if err := u.db.QueryRow(context.Background(), `SELECT id, first_name, last_name,
+	if err := u.db.QueryRow(ctx, `SELECT id, first_name, last_name,
 	 phone_number, created_at, 
 	    updated_at FROM "users"
 		  WHERE phone_number = $1`, number).Scan(
@@ -344,4 +344,30 @@ func (u *UserRepo) UpdatePhoneNumber(ctx context.Context, userID string, number 
 		return "", err
 	}
 	return "Phone number updated successfully", nil
+}
+
+func (u *UserRepo) UserExists(ctx context.Context, phoneNumber string) (bool, error) {
+	var exists bool
+	query := `SELECT EXISTS(SELECT 1 FROM "users" WHERE phone_number = $1)`
+	err := u.db.QueryRow(ctx, query, phoneNumber).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("error checking user existence: %w", err)
+	}
+	return exists, nil
+}
+
+func (u *UserRepo) ValidateOTP(ctx context.Context, phoneNumber, inputOtp, inputIdentifier string) error {
+	var storedOtp, storedIdentifier string
+	err := u.db.QueryRow(ctx, `SELECT otp_code, identifier FROM sms_verifications WHERE phone_number = $1 AND expires_at > NOW()`,
+		phoneNumber,
+	).Scan(&storedOtp, &storedIdentifier)
+	if err != nil {
+		return fmt.Errorf("verification failed: %v", err)
+	}
+
+	if storedOtp != inputOtp || storedIdentifier != inputIdentifier {
+		return fmt.Errorf("invalid OTP or identifier")
+	}
+
+	return nil
 }
