@@ -22,14 +22,12 @@ type UserRegisterRequest struct {
 type UserRegisterConfRequest struct {
 	MobilePhone string       `json:"phone_number"`
 	Otp         string       `json:"otp"`
-	Identifier  string       `json:"identifier"`
 	DeviceInfo  CreateDevice `json:"device_info"`
 }
 
 type UserLoginPhoneConfirmRequest struct {
 	MobilePhone string       `json:"phone_number"`
 	SmsCode     string       `json:"otp"`
-	Identifier  string       `json:"identifier"`
 	DeviceInfo  CreateDevice `json:"device_info"`
 }
 

@@ -53,7 +53,7 @@ func (h *Handler) CreateContact(c *gin.Context) {
 		return
 	}
 
-	contact.ID = userIDStr
+	contact.UserID = userIDStr
 
 	resp, err := h.storage.Contact().Create(c.Request.Context(), &contact)
 	if err != nil {

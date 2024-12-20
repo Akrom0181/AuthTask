@@ -1486,8 +1486,8 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "201": {
-                        "description": "Created",
+                    "200": {
+                        "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/models.Response"
                         }
@@ -2103,9 +2103,6 @@ const docTemplate = `{
                 "device_info": {
                     "$ref": "#/definitions/models.CreateDevice"
                 },
-                "identifier": {
-                    "type": "string"
-                },
                 "otp": {
                     "type": "string"
                 },
@@ -2127,9 +2124,6 @@ const docTemplate = `{
             "properties": {
                 "device_info": {
                     "$ref": "#/definitions/models.CreateDevice"
-                },
-                "identifier": {
-                    "type": "string"
                 },
                 "otp": {
                     "type": "string"

@@ -99,8 +99,6 @@ definitions:
     properties:
       device_info:
         $ref: '#/definitions/models.CreateDevice'
-      identifier:
-        type: string
       otp:
         type: string
       phone_number:
@@ -115,8 +113,6 @@ definitions:
     properties:
       device_info:
         $ref: '#/definitions/models.CreateDevice'
-      identifier:
-        type: string
       otp:
         type: string
       phone_number:
@@ -932,8 +928,8 @@ paths:
       produces:
       - application/json
       responses:
-        "201":
-          description: Created
+        "200":
+          description: OK
           schema:
             $ref: '#/definitions/models.Response'
         "400":

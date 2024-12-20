@@ -35,27 +35,36 @@ func (r *ContactRepo) Create(ctx context.Context, contact *models.Contact) (*mod
         middle_name,
         phone_number, 
         created_at)
-    VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Tashkent')
-        RETURNING created_at`
+    VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Tashkent')`
 
-	var createdAt time.Time
-
-	err := r.db.QueryRow(ctx, query,
+	// Execute the insert query
+	_, err := r.db.Exec(ctx, query,
 		id.String(),
 		contact.UserID,
 		contact.FirstName,
 		contact.LastName,
 		contact.MiddleName,
-		contact.PhoneNumber,
-	).Scan(&createdAt)
+		contact.PhoneNumber)
 
 	if err != nil {
 		r.log.Error("Error creating contact", logger.Error(err))
 		return nil, err
 	}
 
+	// After insert, retrieve the created_at value
+	var createdAt time.Time
+	selectQuery := `SELECT created_at FROM "contacts" WHERE id = $1`
+
+	err = r.db.QueryRow(ctx, selectQuery, id.String()).Scan(&createdAt)
+	if err != nil {
+		r.log.Error("Error retrieving created_at", logger.Error(err))
+		return nil, err
+	}
+
+	// Format the createdAt timestamp to the desired format
 	formattedCreatedAt := createdAt.Format("2006-01-02 15:04:05")
 
+	// Return the created contact with the formatted created_at value
 	return &models.Contact{
 		ID:          id.String(),
 		UserID:      contact.UserID,
@@ -161,7 +170,7 @@ func (c *ContactRepo) GetById(ctx context.Context, id string, userid string) (*m
 			c.log.Warn("Contact not found", logger.String("contactID", id), logger.String("userID", userid))
 			return nil, fmt.Errorf("contact not found")
 		}
-		
+
 		c.log.Error("Database error", logger.Error(err))
 		return nil, fmt.Errorf("internal server error")
 	}

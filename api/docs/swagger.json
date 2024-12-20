@@ -1478,8 +1478,8 @@
                     }
                 ],
                 "responses": {
-                    "201": {
-                        "description": "Created",
+                    "200": {
+                        "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/models.Response"
                         }
@@ -2095,9 +2095,6 @@
                 "device_info": {
                     "$ref": "#/definitions/models.CreateDevice"
                 },
-                "identifier": {
-                    "type": "string"
-                },
                 "otp": {
                     "type": "string"
                 },
@@ -2119,9 +2116,6 @@
             "properties": {
                 "device_info": {
                     "$ref": "#/definitions/models.CreateDevice"
-                },
-                "identifier": {
-                    "type": "string"
                 },
                 "otp": {
                     "type": "string"

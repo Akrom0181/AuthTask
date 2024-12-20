@@ -112,7 +112,7 @@ func (h *Handler) Register(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        login body models.UserLoginRequest true "login"
-// @Success      201  {object}  models.Response
+// @Success      200  {object}  models.Response
 // @Failure      400  {object}  models.Response
 // @Failure      401  {object}  models.Response
 // @Failure      404  {object}  models.Response
