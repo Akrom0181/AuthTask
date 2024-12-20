@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"task/api/models"
 	"task/config"
 	"task/pkg"
@@ -172,7 +173,6 @@ func (a authService) UserRegisterConfirm(ctx context.Context, req models.UserReg
 		return resp, fmt.Errorf(config.ErrUserCreation)
 	}
 
-	// Insert Device
 	device := models.Device{
 		UserID:          id.ID,
 		Name:            req.DeviceInfo.Name,
@@ -194,7 +194,6 @@ func (a authService) UserRegisterConfirm(ctx context.Context, req models.UserReg
 		return resp, fmt.Errorf(config.ErrDeviceInsertion)
 	}
 
-	// Generate Tokens
 	m := map[string]interface{}{
 		"user_id":   id.ID,
 		"user_role": config.USER_ROLE,
@@ -218,6 +217,7 @@ func (a authService) UserLoginSendOTP(ctx context.Context, loginRequest models.U
 
 	otpCode := pkg.GenerateOTP()
 	identifier := pkg.GenerateIdentifier()
+	log.Println(otpCode, identifier)
 
 	msg := fmt.Sprintf("login uchun tasdiqlash kodi: %v  Identifikator: %v", otpCode, identifier)
 

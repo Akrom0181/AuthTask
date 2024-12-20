@@ -28,9 +28,9 @@ import (
 func NewApi(r *gin.Engine, cfg *config.Config, storage storage.IStorage, logger logger.LoggerI, service service.IServiceManager) {
 	// Set trusted proxies to avoid the warning about trusting all proxies
 	err := r.SetTrustedProxies([]string{
-		"13.228.225.19",  
-		"18.142.128.26",  
-		"54.254.162.138", 
+		"13.228.225.19",
+		"18.142.128.26",
+		"54.254.162.138",
 	})
 	if err != nil {
 		logger.Fatal("Failed to set trusted proxies", zap.Error(err))
@@ -82,6 +82,7 @@ func customCORSMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Header("Access-Control-Allow-Origin", "*")
 		c.Header("Access-Control-Allow-Credentials", "true")
+		// c.Header("Access-Control-Allow-Origin", "http://localhost:9090")
 		c.Header("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, PATCH, DELETE, HEAD")
 		c.Header("Access-Control-Allow-Headers", "Platform-Id, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
 		c.Header("Access-Control-Max-Age", "3600")

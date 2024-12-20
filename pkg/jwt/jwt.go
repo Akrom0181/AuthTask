@@ -3,6 +3,7 @@ package jwt
 import (
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt"
@@ -11,7 +12,7 @@ import (
 var config = struct {
 	SignedKey []byte
 }{
-	SignedKey: []byte("OUCdnbfzVa30S+nVBeYy1KMlTfeQUzpiHIqXJ51+2ec="), // Replace with your actual secret key
+	SignedKey: []byte(os.Getenv("SECRET_KEY_JWT")),
 }
 
 // GenJWT generates an access token and a refresh token with claims.
@@ -48,10 +49,8 @@ func GenJWT(claims map[string]interface{}) (string, string, error) {
 	return accessTokenString, refreshTokenString, nil
 }
 
-// ExtractClaims parses a token and extracts its claims.
 func ExtractClaims(tokenStr string) (jwt.MapClaims, error) {
 	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
-		// Ensure token is signed with HMAC
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("unexpected signing method")
 		}
@@ -71,18 +70,18 @@ func ExtractClaims(tokenStr string) (jwt.MapClaims, error) {
 
 // VerifyJWT verifies the validity of a JWT and extracts its claims.
 func VerifyJWT(tokenStr string) (jwt.MapClaims, error) {
-    claims, err := ExtractClaims(tokenStr)
-    if err != nil {
-        return nil, fmt.Errorf("token verification failed: %w", err)
-    }
+	claims, err := ExtractClaims(tokenStr)
+	if err != nil {
+		return nil, fmt.Errorf("token verification failed: %w", err)
+	}
 
-    // Debug: Print claims
-    fmt.Printf("Extracted claims: %+v\n", claims)
+	// Debug: Print claims
+	fmt.Printf("Extracted claims: %+v\n", claims)
 
-    // Example: Validate specific claim
-    if claims["iss"] != "user" {
-        return nil, errors.New("invalid issuer")
-    }
+	// Example: Validate specific claim
+	if claims["iss"] != "user" {
+		return nil, errors.New("invalid issuer")
+	}
 
-    return claims, nil
+	return claims, nil
 }

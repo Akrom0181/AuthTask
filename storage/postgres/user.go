@@ -28,17 +28,17 @@ func NewUserRepo(db *pgxpool.Pool, log logger.LoggerI) *UserRepo {
 func (u *UserRepo) Create(ctx context.Context, user *models.User) (*models.User, error) {
 	id := uuid.New()
 	query := `INSERT INTO users (id, first_name, last_name, phone_number, created_at) 
-			  VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
-			  RETURNING created_at`
+			  VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)`
 
 	var createdAt time.Time
 
-	err := u.db.QueryRow(ctx, query,
+	_, err := u.db.Exec(ctx, query,
 		id.String(),
 		user.FirstName,
 		user.LastName,
 		user.PhoneNumber,
-	).Scan(&createdAt)
+	)
+
 	if err != nil {
 		log.Printf("Error creating user: %v", err)
 		return &models.User{}, err
@@ -184,11 +184,11 @@ func (u *UserRepo) Update(ctx context.Context, user *models.User, user_id string
 		WHERE id = $3
 		RETURNING created_at, updated_at`
 
-	err := u.db.QueryRow(ctx, query,
-		user.FirstName,
-		user.LastName,
+	_, err := u.db.Exec(ctx, query,
+		&user.FirstName,
+		&user.LastName,
 		user_id,
-	).Scan(&created_at, &updated_at)
+	)
 
 	if err != nil {
 		u.log.Error("Error updating user", logger.Error(err))

@@ -47,7 +47,13 @@ func (h *Handler) CreateContact(c *gin.Context) {
 		return
 	}
 
-	contact.UserID = userID.(string)
+	userIDStr, ok := userID.(string)
+	if !ok || userIDStr == "" {
+		c.JSON(http.StatusUnauthorized, models.Response{StatusCode: http.StatusUnauthorized, Description: "you should authorize", Data: userID.(string)})
+		return
+	}
+
+	contact.ID = userIDStr
 
 	resp, err := h.storage.Contact().Create(c.Request.Context(), &contact)
 	if err != nil {

@@ -3,12 +3,14 @@ package handler
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"strconv"
 	_ "task/api/docs"
 	"task/api/models"
+	"task/pkg/logger"
 	check "task/pkg/validation"
 
 	"github.com/gin-gonic/gin"
@@ -162,15 +164,32 @@ func (h *Handler) GetAllUsers(c *gin.Context) {
 	page, err := strconv.ParseUint(c.DefaultQuery("page", "1"), 10, 64)
 	if err != nil {
 		h.log.Error(err.Error() + ":" + "error while parsing page")
-		c.JSON(http.StatusBadRequest, "BadRequest at paging")
+		c.JSON(http.StatusBadRequest, models.Response{
+			StatusCode:  http.StatusBadRequest,
+			Description: "error while parsing page",
+			Data:        page,
+			Error:       err.Error()})
 		return
+	}
+
+	if page < 1 {
+		page = 1
 	}
 
 	limit, err := strconv.ParseUint(c.DefaultQuery("limit", "10"), 10, 64)
 	if err != nil {
-		h.log.Error(err.Error() + ":" + "error while parsing limit")
-		c.JSON(http.StatusInternalServerError, "Internal server error while parsing limit")
+		h.log.Error("Error while parsing limit: " + err.Error())
+		c.JSON(http.StatusBadRequest, models.Response{
+			StatusCode:  http.StatusBadRequest,
+			Description: "Invalid 'limit' parameter. Must be a positive integer.",
+			Data:        nil,
+			Error:       err.Error(),
+		})
 		return
+	}
+
+	if limit < 1 {
+		limit = 10
 	}
 
 	req.Page = page
@@ -179,12 +198,19 @@ func (h *Handler) GetAllUsers(c *gin.Context) {
 	users, err := h.storage.User().GetAll(context.Background(), req)
 	if err != nil {
 		h.log.Error(err.Error() + ":" + "Error while getting all users")
-		c.JSON(http.StatusInternalServerError, models.Response{StatusCode: http.StatusInternalServerError, Description: "error while getting all users", Error: err})
+		c.JSON(http.StatusInternalServerError, models.Response{
+			StatusCode:  http.StatusInternalServerError,
+			Description: "error while getting all users",
+			Error:       err})
 		return
 	}
 
 	h.log.Info("Users retrieved successfully")
-	c.JSON(http.StatusOK, models.Response{StatusCode: http.StatusOK, Description: "users retrieved successfully", Data: users})
+	c.JSON(http.StatusOK, models.Response{
+		StatusCode:  http.StatusOK,
+		Description: "users retrieved successfully",
+		Data:        users,
+	})
 }
 
 // @Security BearerAuth
@@ -201,27 +227,56 @@ func (h *Handler) GetAllUsers(c *gin.Context) {
 // @Failure     404 {object} models.Response{data=string} "Contact not found"
 // @Failure     500 {object} models.Response{data=string} "Server error"
 func (h *Handler) DeleteUser(c *gin.Context) {
+
 	userID, exists := c.Get("user_id")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, models.Response{StatusCode: http.StatusUnauthorized, Description: "unauthorized"})
+		h.log.Warn("User not found in context")
+		c.JSON(http.StatusUnauthorized, models.Response{
+			StatusCode:  http.StatusUnauthorized,
+			Description: "unauthorized: missing user_id",
+			Data:        nil,
+		})
 		return
 	}
 
 	userIDStr, ok := userID.(string)
 	if !ok || userIDStr == "" {
-		c.JSON(http.StatusUnauthorized, models.Response{StatusCode: http.StatusUnauthorized, Description: "invalid user_id"})
+		h.log.Warn("Invalid or empty user_id")
+		c.JSON(http.StatusUnauthorized, models.Response{
+			StatusCode:  http.StatusUnauthorized,
+			Description: "invalid or missing user_id",
+			Data:        nil,
+		})
 		return
 	}
 
-	err := h.storage.User().Delete(context.Background(), userIDStr)
-	if err != nil {
-		h.log.Error(err.Error() + ":" + "error while deleting user")
-		c.JSON(http.StatusInternalServerError, models.Response{StatusCode: http.StatusInternalServerError, Description: "error while deleting user", Error: err})
+	// Attempt to delete the user
+	if err := h.storage.User().Delete(context.Background(), userIDStr); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			h.log.Warn("Attempted to delete non-existent user", logger.Any("userID", userIDStr))
+			c.JSON(http.StatusNotFound, models.Response{
+				StatusCode:  http.StatusNotFound,
+				Description: "user not found",
+				Error:       err.Error(),
+			})
+			return
+		}
+
+		h.log.Error("Error while deleting user", logger.Any("error", err.Error()))
+		c.JSON(http.StatusInternalServerError, models.Response{
+			StatusCode:  http.StatusInternalServerError,
+			Description: "internal server error while deleting user",
+			Error:       err.Error(),
+		})
 		return
 	}
 
-	h.log.Info("User deleted successfully!")
-	c.JSON(http.StatusOK, models.Response{StatusCode: http.StatusOK, Data: userIDStr, Description: "user deleted successfully"})
+	h.log.Info("User deleted successfully", logger.Any("user_id", userIDStr))
+	c.JSON(http.StatusOK, models.Response{
+		StatusCode:  http.StatusOK,
+		Description: "user deleted successfully",
+		Data:        userIDStr,
+	})
 }
 
 // @Security BearerAuth
@@ -272,8 +327,8 @@ func (h *Handler) RequestOTP(c *gin.Context) {
 		return
 	}
 
-	// handleResponseLog(c, h.log, "successfully generated otp", http.StatusOK, err)
-	c.JSON(http.StatusOK, models.Response{StatusCode: http.StatusOK, Description: "successfully generated otp", Data: otpMsg, Error: err})
+	h.log.Info("sending OTP to user with new number from device", logger.Any("otpMsg: ", otpMsg))
+	c.JSON(http.StatusOK, models.Response{StatusCode: http.StatusOK, Description: "successfully generated otpand sent", Data: otpMsg, Error: err})
 }
 
 // @Security BearerAuth
