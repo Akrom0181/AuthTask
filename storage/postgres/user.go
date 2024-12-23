@@ -218,6 +218,14 @@ func (r *UserRepo) Delete(ctx context.Context, id string) error {
 		return fmt.Errorf("failed to start transaction: %w", err)
 	}
 
+	deleteContactQuery := `DELETE FROM "contacts" WHERE user_id = $1`
+	_, err = tx.Exec(ctx, deleteContactQuery, id)
+	if err != nil {
+		r.log.Error("Error deleting user", logger.Error(err))
+		tx.Rollback(ctx)
+		return fmt.Errorf("failed to delete user: %w", err)
+	}
+
 	deleteDevicesQuery := `DELETE FROM "devices" WHERE user_id = $1`
 	_, err = tx.Exec(ctx, deleteDevicesQuery, id)
 	if err != nil {
@@ -228,14 +236,6 @@ func (r *UserRepo) Delete(ctx context.Context, id string) error {
 
 	deleteUserQuery := `DELETE FROM "users" WHERE id = $1`
 	_, err = tx.Exec(ctx, deleteUserQuery, id)
-	if err != nil {
-		r.log.Error("Error deleting user", logger.Error(err))
-		tx.Rollback(ctx)
-		return fmt.Errorf("failed to delete user: %w", err)
-	}
-
-	deleteContactQuery := `DELETE FROM "contacts" WHERE user_id = $1`
-	_, err = tx.Exec(ctx, deleteContactQuery, id)
 	if err != nil {
 		r.log.Error("Error deleting user", logger.Error(err))
 		tx.Rollback(ctx)
