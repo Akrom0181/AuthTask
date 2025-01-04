@@ -71,7 +71,6 @@ func (h *Handler) SendCode(c *gin.Context) {
 func (h *Handler) Register(c *gin.Context) {
 	req := models.UserRegisterConfRequest{}
 
-	// Bind incoming JSON to the request struct
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.log.Error("error while binding body" + err.Error())
 		c.JSON(http.StatusBadRequest, models.Response{StatusCode: http.StatusBadRequest, Description: "error while binding body", Data: &req, Error: err.Error()})
@@ -87,7 +86,6 @@ func (h *Handler) Register(c *gin.Context) {
 		return
 	}
 
-	// Call service layer to confirm registration
 	confResp, err := h.service.Auth().UserRegisterConfirm(c.Request.Context(), req)
 	if err != nil {
 		h.log.Error(err.Error() + ":" + "error while confirming user registration")
@@ -158,7 +156,7 @@ func (h *Handler) UserLogin(c *gin.Context) {
 
 // UserLoginByPhoneConfirm godoc
 // @Router       /task/api/v1/user/loginconfirm [POST]
-// @Summary      Customer login by phone confirmation
+// @Summary      User login by phone confirmation
 // @Description  Login to the system using phone number and OTP
 // @Tags         auth
 // @Accept       json

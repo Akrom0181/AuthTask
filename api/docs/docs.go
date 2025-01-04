@@ -1421,7 +1421,7 @@ const docTemplate = `{
                 "tags": [
                     "auth"
                 ],
-                "summary": "Customer login by phone confirmation",
+                "summary": "User login by phone confirmation",
                 "parameters": [
                     {
                         "description": "login",
@@ -1743,7 +1743,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "update user phone_number by using otp",
+                "description": "Update user phone_number by using otp",
                 "consumes": [
                     "application/json"
                 ],
@@ -1753,7 +1753,7 @@ const docTemplate = `{
                 "tags": [
                     "user"
                 ],
-                "summary": "update user phone_number by otp",
+                "summary": "Update user phone_number by otp",
                 "operationId": "update_user_phone_number",
                 "parameters": [
                     {

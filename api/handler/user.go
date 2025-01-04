@@ -282,8 +282,8 @@ func (h *Handler) DeleteUser(c *gin.Context) {
 // @Security BearerAuth
 // @ID 			update_user_phone_number
 // @Router		/task/api/v1/user/sendotp [POST]
-// @Summary		update user phone_number by otp
-// @Description update user phone_number by using otp
+// @Summary		Update user phone_number by otp
+// @Description Update user phone_number by using otp
 // @Tags		user
 // @Accept		json
 // @Produce		json

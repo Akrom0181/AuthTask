@@ -910,7 +910,7 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/models.Response'
-      summary: Customer login by phone confirmation
+      summary: User login by phone confirmation
       tags:
       - auth
   /task/api/v1/user/loginrequest:
@@ -1082,7 +1082,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: update user phone_number by using otp
+      description: Update user phone_number by using otp
       operationId: update_user_phone_number
       parameters:
       - description: User
@@ -1141,7 +1141,7 @@ paths:
               type: object
       security:
       - BearerAuth: []
-      summary: update user phone_number by otp
+      summary: Update user phone_number by otp
       tags:
       - user
   /task/api/v1/user/update/{id}:
